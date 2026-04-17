@@ -1,0 +1,20 @@
+{
+  "name": "マツゲンぽけっと",
+  "short_name": "マツゲンぽけっと",
+  "start_url": "/customer/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#c30d23",
+  "icons": [
+    {
+      "src": "/images/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

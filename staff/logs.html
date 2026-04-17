@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ログ閲覧（ログイン + 行動イベント）</title>
+    <link rel="stylesheet" href="../css/common.css" />
+    <link rel="stylesheet" href="../css/staff.css" />
+    <style>
+      .logs-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .logs-table th,
+      .logs-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        font-size: 12px;
+      }
+      .logs-table th {
+        background: #f6f8fa;
+        position: sticky;
+        top: 0;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .token-input {
+        width: 280px;
+      }
+      .view-switch {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .hidden {
+        display: none;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+      .props {
+        max-width: 520px;
+        white-space: pre-wrap;
+      }
+      .ip {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+      .ua {
+        max-width: 420px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* ユーザーID識別バッジ */
+      .login-user-badge {
+        display: inline-block;
+        min-width: 1.8em;
+        padding: 2px 6px;
+        border-radius: 14px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: center;
+        margin-right: 4px;
+        border: 1px solid rgba(0,0,0,.15);
+        box-shadow: 0 1px 2px rgba(0,0,0,.08);
+        background: #eee;
+        color: #222;
+        user-select: none;
+      }
+      .login-user-badge[data-dark="1"] { color: #fff; }
+    </style>
+  </head>
+  <body class="admin-page">
+    <header class="header admin-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <h1>ログ閲覧</h1>
+            <span class="admin-badge">管理</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="container">
+        <div class="card">
+          <div class="card-header">検索</div>
+          <div class="card-body">
+            <div class="controls" id="ctrl-common">
+              <input
+                id="token"
+                class="form-input token-input"
+                placeholder="管理トークン (任意: サーバーに設定した場合のみ必須)"
+              />
+              <select id="limit" class="form-select">
+                <option value="50">50件</option>
+                <option value="100">100件</option>
+                <option value="200">200件</option>
+                <option value="all">すべて</option>
+              </select>
+              <button id="exportCombinedLogsXlsx" class="btn btn-primary">ログイン＋明細をまとめてエクセル保存</button>
+              <button id="summarizeViews" class="btn btn-secondary">表示時間を集計</button>
+            </div>
+              <div class="controls" id="ctrl-login">
+              <input id="userId" class="form-input" placeholder="ユーザーID" />
+              <input id="since" class="form-input" type="date" />
+              <input id="until" class="form-input" type="date" />
+              <button id="searchLogin" class="btn">検索</button>
+              <button id="deleteSelectedEvents" class="btn btn-danger">選択して削除</button>
+              <button id="selectAllVisible" class="btn">全選択</button>
+              <button id="deleteAllLogs" class="btn btn-danger">表示中の全ログを削除</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 12px">
+          <div class="card-header">結果</div>
+          <div class="card-body" style="overflow: auto; max-height: 70vh">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin: 0 0 8px 0;">
+              <button id="showAccessTrend" class="btn">表を作成</button>
+              <small style="color:#555;">期間は上の開始日・終了日を利用します</small>
+            </div>
+            <div id="access-trend-wrap" class="card" style="display:none; padding:8px; margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                <strong>アクセス数の推移（日次）</strong>
+                <button id="hideAccessTrend" class="btn btn-secondary btn-sm">閉じる</button>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px;">
+                <label style="display:flex; align-items:center; gap:4px;">高さ(px)
+                  <input type="number" id="accessHeightInput" value="300" min="100" max="800" step="50" style="width:90px;">
+                </label>
+                <label style="display:flex; align-items:center; gap:4px;">幅(px)
+                  <input type="number" id="accessWidthInput" value="600" min="300" max="1600" step="50" style="width:100px;">
+                </label>
+                <label style="display:flex; align-items:center; gap:4px;">最大アクセス数
+                  <input type="number" id="accessMaxInput" value="500" min="50" step="50" style="width:90px;">
+                </label>
+                <button id="applyAccessTrendSettings" class="btn btn-secondary btn-sm" style="height:32px;">再描画</button>
+              </div>
+              <div id="accessTrendChartContainer" style="height:300px; max-height:800px; overflow:hidden;">
+                <canvas id="accessTrendChart" style="height:100%; width:100%;" height="300" width="600"></canvas>
+              </div>
+            </div>
+            <div id="customer-user-total" style="margin:0 0 8px 0; font-weight:600; color:#222;">
+              最大ユーザーID: 読み込み中...
+            </div>
+            <div id="view-summary" style="margin-bottom:8px;color:#222;"></div>
+            <table class="logs-table" id="logsTableLogin">
+              <thead>
+                <tr>
+                  <th style="width:40px"><input type="checkbox" id="header-select-all" title="一覧の全選択" /></th>
+                  <th></th>
+                  <th>日時</th>
+                  <th>ユーザーID</th>
+                  <th>IP</th>
+                  <th>User-Agent</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      if (location.protocol === "file:") {
+        window.API_BASE_URL = window.API_BASE_URL || "http://localhost:8787";
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- SheetJS (xlsx) CDN for client-side Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script type="module">
+      import {
+        apiGetLoginLogs,
+        apiDeleteLoginLog,
+        apiGetEventsLog,
+        apiDeleteEventLog,
+      } from "../js/api-client.js";
+      // トークンの保存/読み込み
+      const tokenInput = document.getElementById("token");
+      try {
+        tokenInput.value = localStorage.getItem("ADMIN_TOKEN") || "";
+      } catch {}
+
+      function getLimit() {
+        return Number(document.getElementById("limit").value) || 50;
+      }
+
+      // ログインログ検索（行動イベントは各行の「イベント表示」で統合表示）
+      async function searchLogin() {
+        const token = tokenInput.value.trim();
+        try {
+          localStorage.setItem("ADMIN_TOKEN", token);
+        } catch {}
+        const userId =
+          document.getElementById("userId").value.trim() || undefined;
+        const since = document.getElementById("since").value || undefined;
+        const until = document.getElementById("until").value || undefined;
+        const limit = getLimit();
+        const tbody = document.querySelector("#logsTableLogin tbody");
+        try {
+          const data = await apiGetLoginLogs({
+            limit,
+            page: 1,
+            userId,
+            since,
+            until,
+          });
+          const items = data.items || [];
+
+          // ユーザーIDごとの順序と色を決定
+          const palette = [
+            '#ffd966', '#ffb3ba', '#baffc9', '#bae1ff', '#d5baff', '#ffdfba', '#c2f0fc', '#ffe6cc',
+            '#e6ffcc', '#ccf2ff', '#ffccd6', '#e0ccff'
+          ];
+          const colorMap = {};
+          const userOrder = [];
+          items.forEach(it => {
+            const uid = it.userId || '';
+            if (!uid) return;
+            if (!(uid in colorMap)) {
+              colorMap[uid] = userOrder.length;
+              userOrder.push(uid);
+            }
+          });
+
+          // ユーザー毎に「次のログイン時刻」を推定（同一ユーザーの次行の時刻、無ければ +6時間）
+          const SIX_HOURS = 6 * 60 * 60 * 1000;
+          // 各ログ行について「次の（将来の）同一ユーザーの時刻」を探す
+          // もとの実装は配列順に依存していて、降順の場合に次時刻が過去になってしまうため
+          // 各行の ts より大きい最小の同一 userId の ts を採用する。
+          const nextUntilMsArr = items.map((it, i) => {
+            const uid = it.userId || "";
+            const sinceMs = it.ts ? new Date(it.ts).getTime() : Date.now();
+            let nextTs = null;
+            for (let j = 0; j < items.length; j++) {
+              if (j === i) continue;
+              if ((items[j].userId || "") !== uid) continue;
+              const t = items[j].ts ? new Date(items[j].ts).getTime() : 0;
+              if (t > sinceMs && (nextTs === null || t < nextTs)) {
+                nextTs = t;
+              }
+            }
+            if (nextTs) return nextTs;
+            return sinceMs + SIX_HOURS;
+          });
+
+          tbody.innerHTML = items
+            .map((it) => {
+              const ts = it.ts ? new Date(it.ts).toLocaleString("ja-JP") : "";
+              // IPアドレスを完全表示（伏字解除）
+              const ip = it.ip || "";
+              const ua = it.ua || "";
+              const sinceMs = it.ts ? new Date(it.ts).getTime() : Date.now();
+              const untilMs =
+                nextUntilMsArr[(data.items || []).indexOf(it)] ||
+                sinceMs + SIX_HOURS;
+              const uid = it.userId || '';
+              const idx = uid ? colorMap[uid] : -1;
+              const color = idx >= 0 ? palette[idx % palette.length] : '';
+              // 輝度で文字色判断 (簡易)
+              let dark = 0;
+              if (color) {
+                const hex = color.replace('#','');
+                const r = parseInt(hex.substring(0,2),16);
+                const g = parseInt(hex.substring(2,4),16);
+                const b = parseInt(hex.substring(4,6),16);
+                const luminance = (0.299*r + 0.587*g + 0.114*b);
+                dark = luminance < 140 ? 1 : 0;
+              }
+              const badge = uid ? `<span class="login-user-badge" style="background:${color};" data-dark="${dark}" title="同一ユーザー #${idx+1}">${idx+1}</span>` : '';
+              return `<tr data-id="${it.id}">
+              <td><input type="checkbox" class="select-login" data-id="${it.id}" /></td>
+              <td><button class="btn btn-secondary btn-sm" data-action="toggle-events" data-userid="${(
+                it.userId || ""
+              ).replace(
+                /"/g,
+                "&quot;"
+              )}" data-since="${sinceMs}" data-until="${untilMs}">イベント▼</button></td>
+              <td>${ts}</td>
+              <td>${badge}${it.userId || ""}</td>
+              <td class="ip">${ip}</td>
+              <td class="ua" title="${ua
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")}">${ua.replace(/</g, "&lt;")}</td>
+              <td><button class="btn btn-danger btn-sm" data-action="delete-login" data-id="${
+                it.id
+              }">削除</button></td>
+            </tr>`;
+            })
+            .join("");
+        } catch (err) {
+          const is401 = /401/.test(String(err?.message || err));
+          const msg = is401
+            ? "認証が必要です。管理トークンを入力して『検索』を押してください。"
+            : `読み込みに失敗しました: ${err?.message || err}`;
+          if (is401) {
+            // トークン欄を強調
+            tokenInput.style.borderColor = "#c00";
+            tokenInput.style.boxShadow = "0 0 0 2px rgba(204,0,0,0.1)";
+            tokenInput.focus();
+          }
+          tbody.innerHTML = `<tr><td colspan="6" style="color:#c00;">${msg}</td></tr>`;
+        }
+      }
+
+      document
+        .getElementById("searchLogin")
+        .addEventListener("click", searchLogin);
+
+      // ===== アクセス推移（日次）グラフ =====
+      function toJstYmd(ts){
+        try{
+          const d = new Date(ts);
+          // サーバーはUTC保存のため、JSTへ +9h して日付を抽出
+          const jst = new Date(d.getTime() + 9*60*60*1000);
+          return jst.toISOString().slice(0,10);
+        } catch { return ''; }
+      }
+      async function computeTrendClientSide(since, until){
+        const token = (document.getElementById('token').value || '').trim();
+        const limit = 500;
+        const headers = token ? { 'x-admin-token': token } : {};
+        const qs = new URLSearchParams();
+        if (since) qs.set('since', since);
+        if (until) qs.set('until', until);
+        let page = 1;
+        const all = [];
+        for(;;){
+          const resp = await fetch(`/api/login-logs?${qs.toString()}&limit=${limit}&page=${page}`, { headers });
+          if (!resp.ok) break;
+          const data = await resp.json();
+          const items = Array.isArray(data?.items) ? data.items : [];
+          all.push(...items);
+          if (items.length < limit) break;
+          page++;
+          if (page > 200) break;
+        }
+        const map = new Map();
+        for (const r of all) {
+          if (!r?.ts) continue;
+          const ymd = toJstYmd(r.ts);
+          map.set(ymd, (map.get(ymd)||0) + 1);
+        }
+        const begin = new Date((since||'') + 'T00:00:00+09:00');
+        const end = new Date((until||'') + 'T00:00:00+09:00');
+        const items = [];
+        if (isFinite(begin.getTime()) && isFinite(end.getTime())){
+          for (let cur = new Date(begin); cur <= end; cur.setDate(cur.getDate()+1)){
+            const y = cur.toISOString().slice(0,10);
+            items.push({ date: y, count: map.get(y) || 0 });
+          }
+        } else {
+          // 期間未指定時でも欠損日を0で補完（データ最小～最大）
+          const dates = Array.from(map.keys()).sort((a,b)=> a < b ? -1 : 1);
+          if (dates.length){
+            const start = new Date(dates[0] + 'T00:00:00+09:00');
+            const stop = new Date(dates[dates.length-1] + 'T00:00:00+09:00');
+            for (let cur = new Date(start); cur <= stop; cur.setDate(cur.getDate()+1)){
+              const y = cur.toISOString().slice(0,10);
+              items.push({ date: y, count: map.get(y) || 0 });
+            }
+          }
+        }
+        return items;
+      }
+
+      let __accessTrendChart = null;
+      async function renderAccessTrend(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        const since = document.getElementById('since').value || '';
+        const until = document.getElementById('until').value || '';
+        const headers = token ? { 'x-admin-token': token } : {};
+        const qs = new URLSearchParams();
+        if (since) qs.set('since', since);
+        if (until) qs.set('until', until);
+        let items = [];
+        // 404を出さないため、既定はクライアント集計のみを使用
+        const USE_SERVER_TREND = false; // 必要時のみ true に変更
+        if (USE_SERVER_TREND) {
+          try {
+            const res = await fetch(`/api/stats/access-trend${qs.toString()?('?' + qs.toString()):''}`, { headers });
+            if (res.ok) {
+              const data = await res.json();
+              items = Array.isArray(data.items) ? data.items : [];
+            } else {
+              items = await computeTrendClientSide(since, until);
+            }
+          } catch {
+            items = await computeTrendClientSide(since, until);
+          }
+        } else {
+          items = await computeTrendClientSide(since, until);
+        }
+
+        const labels = items.map(it => it.date);
+        const counts = items.map(it => Number(it.count) || 0);
+        const canvasEl = document.getElementById('accessTrendChart');
+        const containerEl = document.getElementById('accessTrendChartContainer');
+        const heightInputVal = Number(document.getElementById('accessHeightInput')?.value) || 300;
+        const widthInputVal = Number(document.getElementById('accessWidthInput')?.value) || 600;
+        const yAxisMax = Number(document.getElementById('accessMaxInput')?.value) || 500;
+        const desiredHeight = Math.min(800, Math.max(100, heightInputVal));
+        const desiredWidth = Math.min(1600, Math.max(300, widthInputVal));
+        try {
+          canvasEl.style.height = desiredHeight + 'px';
+          canvasEl.style.maxHeight = desiredHeight + 'px';
+          canvasEl.setAttribute('height', String(desiredHeight));
+          canvasEl.style.width = desiredWidth + 'px';
+          canvasEl.style.maxWidth = desiredWidth + 'px';
+          canvasEl.setAttribute('width', String(desiredWidth));
+          if (containerEl) {
+            containerEl.style.width = desiredWidth + 'px';
+            containerEl.style.maxWidth = desiredWidth + 'px';
+            containerEl.style.height = desiredHeight + 'px';
+          }
+        } catch {}
+
+        const ctx = canvasEl.getContext('2d');
+        if (__accessTrendChart) { __accessTrendChart.destroy(); __accessTrendChart = null; }
+        __accessTrendChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'アクセス数',
+              data: counts,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.15)',
+              tension: 0.25,
+              pointRadius: 2,
+              fill: true,
+            }]
+          },
+          options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              x: {
+                ticks: {
+                  maxRotation: 0,
+                  autoSkip: false,
+                  callback: function(value, index, ticks){
+                    // ラベルは日付文字列 'YYYY-MM-DD'
+                    const lbl = this.getLabelForValue(value);
+                    if (!lbl || typeof lbl !== 'string') return '';
+                    // 常に月初は表示
+                    if (lbl.endsWith('-01')) {
+                      const md = lbl.slice(5).replace('-', '/'); // 'MM/DD'
+                      return md;
+                    }
+                    // 約1か月など長期間では 5日ごとに表示したい: インデックス基準でも絞る
+                    try {
+                      const d = Number(lbl.slice(8,10));
+                      if (!isNaN(d) && d % 5 === 0) {
+                        const md = lbl.slice(5).replace('-', '/'); // 'MM/DD'
+                        return md;
+                      }
+                    } catch {}
+                    // それ以外は非表示
+                    return '';
+                  }
+                },
+                grid: { lineWidth: 10, color: 'rgba(0,0,0,0.06)', drawTicks: false }
+              },
+              y: {
+                beginAtZero: true,
+                max: yAxisMax,
+                ticks: { stepSize: 50, precision: 0 }
+              }
+            },
+            plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
+          }
+        });
+        const panel = document.getElementById('access-trend-wrap');
+        if (panel) panel.style.display = 'block';
+      }
+
+      document.getElementById('showAccessTrend').addEventListener('click', renderAccessTrend);
+      document.getElementById('hideAccessTrend').addEventListener('click', ()=>{
+        const panel = document.getElementById('access-trend-wrap');
+        if (panel) panel.style.display = 'none';
+        if (__accessTrendChart) { __accessTrendChart.destroy(); __accessTrendChart = null; }
+      });
+      document.getElementById('applyAccessTrendSettings').addEventListener('click', ()=>{ if (__accessTrendChart) renderAccessTrend(); });
+
+      function buildQuery(params){
+        const qs = new URLSearchParams();
+        Object.entries(params).forEach(([k,v])=>{ if (v!=null && v!=='') qs.set(k, String(v)); });
+        return qs.toString();
+      }
+
+      async function exportAllAsExcel(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        const userId = document.getElementById('userId').value.trim();
+        const since = document.getElementById('since').value;
+        const until = document.getElementById('until').value;
+        const limitSel = document.getElementById('limit').value;
+        const limit = limitSel === 'all' ? 'all' : (Number(limitSel) || 1000);
+        // kind はサーバ側仕様で login/event を受け付ける。既存は login を取得。
+        const qs = buildQuery({ kind: 'login', format: 'xlsx', userId, since, until, limit });
+        const res = await fetch(`/api/log-export?${qs}`, { headers: token ? { 'x-admin-token': token } : {} });
+        if (!res.ok){
+          const t = await res.text().catch(()=> '');
+          alert(`エクスポート失敗: ${res.status} ${t}`);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const now = new Date();
+        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+        a.href = url;
+        a.download = `login-logs-${userId||'all'}-${ts}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      (function(){ const b = document.getElementById('exportAllXlsx'); if (b) b.addEventListener('click', exportAllAsExcel); })();
+      
+      // 行動イベントの Excel エクスポート（ユーザー/期間フィルタ対応）
+      async function exportEventsAsExcel(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        const userId = document.getElementById('userId').value.trim();
+        const since = document.getElementById('since').value;
+        const until = document.getElementById('until').value;
+        const limitSel = document.getElementById('limit').value;
+        const limit = limitSel === 'all' ? 5000 : (Number(limitSel) || 1000);
+        const qs = buildQuery({ kind: 'event', format: 'xlsx', userId, since, until, limit, summary: 1 });
+        const res = await fetch(`/api/log-export?${qs}`, { headers: token ? { 'x-admin-token': token } : {} });
+        if (!res.ok){
+          const t = await res.text().catch(()=> '');
+          alert(`エクスポート失敗: ${res.status} ${t}`);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const now = new Date();
+        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+        a.href = url;
+        a.download = `event-logs-summary-${userId||'all'}-${ts}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      (function(){ const b = document.getElementById('exportEventsXlsx'); if (b) b.addEventListener('click', exportEventsAsExcel); })();
+      // 詳細だけ（単一列）を Excel へ
+      async function exportEventDetailsOnly(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        const userId = document.getElementById('userId').value.trim();
+        const since = document.getElementById('since').value;
+        const until = document.getElementById('until').value;
+        const limitSel = document.getElementById('limit').value;
+        const limit = limitSel === 'all' ? 5000 : (Number(limitSel) || 1000);
+        const qs = buildQuery({ kind: 'event', format: 'xlsx', userId, since, until, limit, summary: 1, detailsOnly: 1 });
+        const res = await fetch(`/api/log-export?${qs}`, { headers: token ? { 'x-admin-token': token } : {} });
+        if (!res.ok){
+          const t = await res.text().catch(()=> '');
+          alert(`エクスポート失敗: ${res.status} ${t}`);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const now = new Date();
+        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+        a.href = url;
+        a.download = `event-details-only-${userId||'all'}-${ts}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+      (function(){ const b = document.getElementById('exportEventDetailsOnlyXlsx'); if (b) b.addEventListener('click', exportEventDetailsOnly); })();
+      // 表示中の明細（DOM内の展開済み .event-detail）をパースしてExcel出力
+      async function exportVisibleEventDetailsFromDOM(){
+        try{
+          const nodes = document.querySelectorAll('.event-detail');
+          const data = [["日時","種類","セッションID","詳細","詳細表示テキスト"]];
+          nodes.forEach(detailRow => {
+            const rows = detailRow.querySelectorAll('table tbody tr');
+            rows.forEach(tr => {
+              const tds = tr.querySelectorAll('td');
+              if (!tds || tds.length < 6) return;
+              const datetime = (tds[1].textContent || '').trim();
+              const type = (tds[2].textContent || '').trim();
+              const sessionId = (tds[3].textContent || '').trim();
+              const details = (tds[4].textContent || '').trim();
+              const detailText = (tds[5].textContent || '').trim();
+              data.push([datetime, type, sessionId, details, detailText]);
+            });
+          });
+          if (data.length === 1) {
+            alert('現在展開されている明細が見つかりません。まず「イベント▼」で明細を展開してください。');
+            return;
+          }
+          const ws = XLSX.utils.aoa_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "表示中の明細");
+          const now = new Date();
+          const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+          XLSX.writeFile(wb, `visible-event-details-${ts}.xlsx`);
+        } catch(e){
+          console.error('exportVisibleEventDetailsFromDOM error', e);
+          alert('エクスポート中にエラーが発生しました。コンソールを確認してください。');
+        }
+      }
+      (function(){ const b = document.getElementById('exportVisibleDetailsXlsx'); if (b) b.addEventListener('click', exportVisibleEventDetailsFromDOM); })();
+      document.getElementById('summarizeViews').addEventListener('click', summarizeViews);
+      document.getElementById('deleteSelectedEvents').addEventListener('click', deleteSelectedEvents);
+      document.getElementById('selectAllVisible').addEventListener('click', ()=>{
+        // check all visible login checkboxes and event-detail checkboxes
+        document.querySelectorAll('#logsTableLogin tbody input.select-login').forEach(cb=> cb.checked = true);
+        document.querySelectorAll('.event-detail input.select-event').forEach(cb=> cb.checked = true);
+        const hdr = document.getElementById('header-select-all'); if (hdr) hdr.checked = true;
+      });
+      document.getElementById('header-select-all').addEventListener('change', (e)=>{
+        const on = e.target.checked;
+        document.querySelectorAll('#logsTableLogin tbody input.select-login').forEach(cb=> cb.checked = on);
+      });
+      document.getElementById('deleteAllLogs').addEventListener('click', deleteAllLogs);
+
+      async function deleteSelectedEvents(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        // 明細行内のイベント選択（展開された詳細テーブル内）と、ログ一覧のチェックを両方取得
+        const detailChecked = Array.from(document.querySelectorAll('.event-detail input.select-event:checked')).map(i=>i.getAttribute('data-id')).filter(Boolean).map(Number);
+        const loginChecked = Array.from(document.querySelectorAll('#logsTableLogin input.select-login:checked')).map(i=>i.getAttribute('data-id')).filter(Boolean).map(Number);
+        if (!detailChecked.length && !loginChecked.length) {
+          alert('削除するログを選択してください（一覧または展開明細でチェックしてください）');
+          return;
+        }
+        const total = detailChecked.length + loginChecked.length;
+        if (!confirm(`選択した ${total} 件のログを削除します。よろしいですか？`)) return;
+        const errors = [];
+        // まずイベントログ側の削除
+        for (const id of detailChecked) {
+          try {
+            const ok = await apiDeleteEventLog(id);
+            if (!ok) errors.push(`event:${id}`);
+          } catch (e) {
+            console.error('delete event', id, e);
+            errors.push(`event:${id}`);
+          }
+        }
+        // 次にログインログ側の削除
+        for (const id of loginChecked) {
+          try {
+            const ok = await apiDeleteLoginLog(id);
+            if (!ok) errors.push(`login:${id}`);
+          } catch (e) {
+            console.error('delete login', id, e);
+            errors.push(`login:${id}`);
+          }
+        }
+        if (errors.length) {
+          alert(`一部の削除に失敗しました: ${errors.join(', ')}\nコンソールを確認してください。`);
+        } else {
+          alert('削除が完了しました。一覧を再読み込みします。');
+        }
+        // 再表示
+        await searchLogin();
+      }
+
+      async function summarizeViews(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        let since = document.getElementById('since').value || undefined;
+        let until = document.getElementById('until').value || undefined;
+        const limit = 500;
+        const items = [];
+        let page = 1;
+        while(true){
+          try{
+            const resp = await apiGetEventsLog({ limit, page, type: 'view', since, until });
+            if (!resp || !Array.isArray(resp.items)) break;
+            items.push(...resp.items);
+            if ((resp.items || []).length < limit) break;
+            page++;
+          } catch(e){ console.error(e); break; }
+        }
+        // 入力が空の場合は、現在表示されているログ一覧から期間を推定（最小〜最大の日時）
+        if (!since || !until) {
+          try {
+            const dates = Array.from(document.querySelectorAll('#logsTableLogin tbody tr td:nth-child(3)'))
+              .map(td => (td.textContent || '').trim())
+              .filter(s => s);
+            const toDate = (s) => { try { return new Date(s); } catch { return null; } };
+            const ms = dates.map(s => toDate(s)?.getTime()).filter(n => typeof n === 'number' && isFinite(n));
+            if (ms.length) {
+              const min = new Date(Math.min(...ms));
+              const max = new Date(Math.max(...ms));
+              const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+              since = since || fmt(min);
+              until = until || fmt(max);
+            }
+          } catch {}
+        }
+        // クライアント側でも期間で厳密にフィルタリング（サーバ側未対応や時差の誤差を吸収）
+        if (since || until) {
+          const beginMs = since ? new Date(`${since}T00:00:00+09:00`).getTime() : -Infinity;
+          const endMs = until ? new Date(`${until}T23:59:59+09:00`).getTime() : Infinity;
+          const filtered = items.filter(it => {
+            const t = it.ts ? new Date(it.ts).getTime() : NaN;
+            return isFinite(t) && t >= beginMs && t <= endMs && String(it.type||'') === 'view';
+          });
+          items.length = 0; items.push(...filtered);
+        }
+        const summaryEl = document.getElementById('view-summary');
+        if (!items.length) {
+          summaryEl.textContent = '件が見つかりませんでした（期間設定を確認してください）';
+          return;
+        }
+        // 集計: feature (props.feature) または page をキーにする
+        const agg = {};
+        items.forEach(it => {
+          const p = it.props || {};
+          const key = (p.feature || it.page || 'unknown').toString();
+          const d = Number(p.durationMs) || 0;
+          if (!agg[key]) agg[key] = { count: 0, totalMs: 0, durations: [] };
+          agg[key].count += 1;
+          agg[key].totalMs += d;
+          if (d > 0) agg[key].durations.push(d);
+        });
+        // 表示
+        const fmtMinSec = (sec) => {
+          const s = Math.max(0, Math.round(sec));
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          return `${m}分${r}秒`;
+        };
+        // 外れ値除去した平均（上位5%をトリム）
+        const trimmedMeanSec = (arrMs) => {
+          const a = (arrMs || []).filter(x => Number.isFinite(x) && x > 0).slice().sort((x,y)=>x-y);
+          const n = a.length;
+          if (!n) return 0;
+          const trim = Math.floor(n * 0.05); // 5% トリム
+          const start = Math.min(n-1, Math.max(0, trim));
+          const end = Math.max(start, n - 1 - trim);
+          let sum = 0; let cnt = 0;
+          for (let i = start; i <= end; i++){ sum += a[i]; cnt++; }
+          return cnt ? (sum / cnt) / 1000 : 0;
+        };
+        const trimmedInfo = (arrMs) => {
+          const a = (arrMs || []).filter(x => Number.isFinite(x) && x > 0).slice().sort((x,y)=>x-y);
+          const n = a.length;
+          if (!n) return { removed: 0, lowerCut: null, upperCut: null };
+          const trim = Math.floor(n * 0.05);
+          const removed = trim * 2;
+          const lowerCut = trim > 0 ? a[trim-1] : null;
+          const upperCut = trim > 0 ? a[n - trim] : null;
+          return { removed, lowerCut, upperCut };
+        };
+        const rows = Object.keys(agg).map(k => {
+          const a = agg[k];
+          const totalSec = a.totalMs / 1000;
+          const avgSec = trimmedMeanSec(a.durations);
+          const info = trimmedInfo(a.durations);
+          const fmtMsToMinSec = (ms) => fmtMinSec((Number(ms)||0)/1000);
+          const cutLabel = (info.removed>0) ? `下位5%: ${fmtMsToMinSec(info.lowerCut)} / 上位5%: ${fmtMsToMinSec(info.upperCut)}` : '-';
+          return `<tr><td>${k}</td><td style="text-align:right">${a.count}</td><td style="text-align:right">${fmtMinSec(totalSec)}</td><td style="text-align:right">${fmtMinSec(avgSec)}</td><td style="text-align:right">${info.removed}件</td><td>${cutLabel}</td></tr>`;
+        }).join('');
+        summaryEl.innerHTML = `<strong>表示時間集計（${items.length} 件取得）</strong><div style="color:#555; margin-top:4px;">平均は外れ値（上下5%）を除外したトリム平均です</div><table class="logs-table" style="margin-top:6px; width:auto;"><thead><tr><th>機能</th><th>回数</th><th>合計滞在</th><th>平均滞在</th><th>外れ値除外</th><th>閾値（除外境界）</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      // 全ログ削除: 検索条件に合致するログをページングで取得し、すべて削除する
+      async function deleteAllLogs(){
+        const token = (document.getElementById('token').value || '').trim();
+        try { localStorage.setItem('ADMIN_TOKEN', token); } catch {}
+        if (!confirm('表示中（検索条件に一致する）ログを全て削除します。よろしいですか？ この操作は取り消せません。')) return;
+        const userId = document.getElementById('userId').value.trim() || undefined;
+        const since = document.getElementById('since').value || undefined;
+        const until = document.getElementById('until').value || undefined;
+        const errors = [];
+        try{
+          // 1) collect all event ids matching period
+          const evIds = [];
+          const evLimit = 500;
+          let evPage = 1;
+          while(true){
+            const resp = await apiGetEventsLog({ limit: evLimit, page: evPage, since, until });
+            if (!resp || !Array.isArray(resp.items) || resp.items.length === 0) break;
+            resp.items.forEach(it=>{ if (it && it.id) evIds.push(it.id); });
+            if (resp.items.length < evLimit) break;
+            evPage++;
+          }
+
+          // 2) collect all login ids matching filters
+          const liIds = [];
+          const liLimit = 200;
+          let liPage = 1;
+          while(true){
+            const resp = await apiGetLoginLogs({ limit: liLimit, page: liPage, userId, since, until });
+            if (!resp || !Array.isArray(resp.items) || resp.items.length === 0) break;
+            resp.items.forEach(it=>{ if (it && it.id) liIds.push(it.id); });
+            if (resp.items.length < liLimit) break;
+            liPage++;
+          }
+
+          // 3) delete events first
+          for (const id of evIds){
+            try{ const ok = await apiDeleteEventLog(id); if (!ok) errors.push(`event:${id}`); } catch(e){ console.error('delete event', id, e); errors.push(`event:${id}`); }
+          }
+          // 4) delete login logs
+          for (const id of liIds){
+            try{ const ok = await apiDeleteLoginLog(id); if (!ok) errors.push(`login:${id}`); } catch(e){ console.error('delete login', id, e); errors.push(`login:${id}`); }
+          }
+
+          if (errors.length){
+            alert('一部の削除に失敗しました: ' + errors.join(', ') + '\nコンソールを確認してください');
+          } else {
+            alert('削除が完了しました。');
+          }
+        } catch (e){
+          console.error('deleteAllLogs error', e);
+          alert('全削除に失敗しました。コンソールを確認してください。');
+        }
+        await searchLogin();
+      }
+
+      // 行の削除ボタン処理（イベントデリゲーション）
+      document.addEventListener("click", async (e) => {
+        const btnLogin = e.target.closest('button[data-action="delete-login"]');
+        const btnEvent = e.target.closest('button[data-action="delete-event"]');
+        const btnToggle = e.target.closest(
+          'button[data-action="toggle-events"]'
+        );
+        if (btnToggle) {
+          // 開閉トグル: 次の行に詳細があれば消す、無ければ作って取得
+          const tr = btnToggle.closest("tr");
+          const next = tr && tr.nextElementSibling;
+          if (next && next.classList.contains("event-detail")) {
+            next.remove();
+            return;
+          }
+          // 明細行を挿入してローディング表示
+          const colSpan = tr.children.length;
+          const detailRow = document.createElement("tr");
+          detailRow.className = "event-detail";
+          const td = document.createElement("td");
+          td.colSpan = colSpan;
+          td.innerHTML = `<div style="background:#fafbfc;border:1px solid #e1e4e8;padding:8px;border-radius:6px;">
+            <div style="margin-bottom:6px;color:#555;">行動イベント（読み込み中...）</div>
+            <div class="events-wrap"></div>
+          </div>`;
+          detailRow.appendChild(td);
+          tr.parentNode.insertBefore(detailRow, tr.nextSibling);
+
+          // パラメータ取得
+          const uid = btnToggle.getAttribute("data-userid") || "";
+          const sinceMs = Number(btnToggle.getAttribute("data-since")) || 0;
+          const untilMs =
+            Number(btnToggle.getAttribute("data-until")) ||
+            sinceMs + 6 * 60 * 60 * 1000;
+          try {
+            // まず userId でイベント取得し、クライアント側で時刻絞り込み
+            const resp = await apiGetEventsLog({
+              limit: 300,
+              page: 1,
+              userId: uid,
+            });
+            const rows = (resp.items || [])
+              .filter((it) => {
+                const t = it.ts ? new Date(it.ts).getTime() : 0;
+                return (
+                  t >= sinceMs && t <= untilMs && (it.anonUserId || "") === uid
+                );
+              })
+              .sort(
+                (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime()
+              );
+            const wrap = td.querySelector(".events-wrap");
+            if (!rows.length) {
+              wrap.innerHTML = `<div style="color:#666;">該当する行動イベントはありません（期間: ${new Date(
+                sinceMs
+              ).toLocaleString("ja-JP")} ～ ${new Date(untilMs).toLocaleString(
+                "ja-JP"
+              )}）</div>`;
+              return;
+            }
+            const html = [
+              `<table class="logs-table" style="margin-top:6px;">
+              <thead><tr>
+                <th style="width:40px;">選択</th>
+                <th style="width:160px;">日時</th>
+                <th>種類</th>
+                <th>セッションID</th>
+                <th>詳細</th>
+                <th>詳細表示テキスト</th>
+                <th>操作</th>
+              </tr></thead><tbody>`,
+              rows
+                .map((ev) => {
+                  const ts = ev.ts
+                    ? new Date(ev.ts).toLocaleString("ja-JP")
+                    : "";
+                  const p = ev.props || {};
+                  const typeLabel = (function(t){
+                    switch(String(t||"")){
+                      case 'page_view': return 'ページ閲覧';
+                      case 'page_loaded': return 'ページ読み込み';
+                      case 'view': return '表示（領域）';
+                      case 'click': return 'クリック';
+                      case 'scroll': return 'スクロール';
+                      case 'form_submit': return 'フォーム送信';
+                      default: return String(t||'').replace(/_/g,' ');
+                    }
+                  })(ev.type);
+                  const feature = p.feature || ev.page || '';
+                  const details = [];
+                  if (p.elementId) details.push(`要素ID:${p.elementId}`);
+                  if (p.element) details.push(`要素:${p.element}`);
+                  if (p.text) details.push(`テキスト:"${String(p.text).slice(0,120)}"`);
+                  if (p.durationMs) details.push(`滞在:${Math.round(p.durationMs/1000)}秒`);
+                  if (p.maxScrollPct!=null) details.push(`スクロール:${p.maxScrollPct}%`);
+                  if (p.utm) {
+                    try { details.push(`utm:${JSON.stringify(p.utm)}`); } catch(e){}
+                  }
+                  const op = `${typeLabel}${feature? '（' + feature + '）' : ''}${details.length? ' — ' + details.join('; ') : ''}`;
+                  // include device under props if present so logs show device info as well
+                  const combined = Object.assign({}, p || {});
+                  if (ev.device) combined.device = ev.device;
+                  const prettyProps = (()=>{ try { return JSON.stringify(combined, null, 2); } catch { return String(combined); } })();
+                  return `<tr data-id="${ev.id}">
+                  <td><input type="checkbox" class="select-event" data-id="${ev.id}" /></td>
+                  <td>${ts}</td>
+                  <td class="mono">${typeLabel}${feature? '（' + feature + '）' : ''}</td>
+                  <td class="mono">${ev.sessionId || ""}</td>
+                  <td class="props mono" style="white-space:pre-wrap;">${op.replace(/</g,'&lt;')}</td>
+                  <td class="props mono" style="white-space:pre-wrap; max-width:520px;">${prettyProps.replace(/</g,'&lt;')}</td>
+                  <td><button class="btn btn-danger btn-sm" data-action="delete-event" data-id="${ev.id}">削除</button></td>
+                </tr>`;
+                })
+                .join(""),
+              "</tbody></table>",
+            ].join("");
+            wrap.innerHTML = html;
+          } catch (err) {
+            td.querySelector(
+              ".events-wrap"
+            ).innerHTML = `<div style="color:#c00;">読み込みに失敗しました: ${
+              (err && err.message) || String(err)
+            }</div>`;
+          }
+          return;
+        }
+
+        if (!btnLogin && !btnEvent) return;
+        const btn = btnLogin || btnEvent;
+        const id = btn.getAttribute("data-id");
+        if (!id) return;
+        if (!confirm("このログを削除しますか？")) return;
+        try {
+          const ok = btnLogin
+            ? await apiDeleteLoginLog(id)
+            : await apiDeleteEventLog(id);
+          if (ok) {
+            const tr = btn.closest("tr");
+            if (tr) {
+              // ログイン行の場合は、後続の明細行もあれば消す
+              if (btnLogin) {
+                const next = tr.nextElementSibling;
+                if (next && next.classList.contains("event-detail"))
+                  next.remove();
+              }
+              tr.remove();
+            }
+          } else {
+            alert("削除に失敗しました");
+          }
+        } catch (err) {
+          alert("削除に失敗しました: " + (err?.message || err));
+        }
+      });
+
+      // 初回読み込み
+      searchLogin();
+
+      // 表示中のログ行（一覧に表示されている各 login 行）の data を使って
+      // API 経由で行動イベントを取得し、Excel に出力する
+      async function exportVisibleEventDetailsViaApi(){
+        try{
+          // collect unique targets from visible login rows
+          const targets = [];
+          document.querySelectorAll('#logsTableLogin tbody tr').forEach(tr=>{
+            const btn = tr.querySelector('button[data-action="toggle-events"]');
+            if (!btn) return;
+            const uid = (btn.getAttribute('data-userid')||'').trim();
+            if (!uid) return;
+            const sinceMs = Number(btn.getAttribute('data-since')) || 0;
+            const untilMs = Number(btn.getAttribute('data-until')) || (sinceMs + 6*60*60*1000);
+            // avoid duplicates
+            const key = `${uid}::${sinceMs}::${untilMs}`;
+            if (!targets.find(t=>t.key===key)) targets.push({ key, uid, sinceMs, untilMs });
+          });
+          if (!targets.length){
+            alert('表示されているログ行からイベント取得対象が見つかりません。まず検索して一覧を表示してください。');
+            return;
+          }
+          const allItems = [];
+          for (const t of targets){
+            let page = 1;
+            const limit = 500;
+            while(true){
+              const resp = await apiGetEventsLog({ limit, page, userId: t.uid });
+              if (!resp || !Array.isArray(resp.items) || resp.items.length===0) break;
+              // client-side filter by time and user identity where necessary
+              resp.items.forEach(it=>{
+                const tsMs = it.ts ? new Date(it.ts).getTime() : 0;
+                const matchesUser = (it.anonUserId && String(it.anonUserId)===String(t.uid)) || (it.userId && String(it.userId)===String(t.uid));
+                if (tsMs >= t.sinceMs && tsMs <= t.untilMs && matchesUser) allItems.push(it);
+              });
+              if (resp.items.length < limit) break;
+              page++;
+            }
+          }
+          if (!allItems.length){
+            alert('対象期間・ユーザーに該当する行動イベントが見つかりませんでした');
+            return;
+          }
+          // sort by timestamp asc
+          allItems.sort((a,b)=> (new Date(a.ts).getTime()||0) - (new Date(b.ts).getTime()||0));
+          const data = [["日時","種類","セッションID","詳細","詳細表示テキスト"]];
+          allItems.forEach(ev=>{
+            const ts = ev.ts ? new Date(ev.ts).toLocaleString('ja-JP') : '';
+            const p = ev.props || {};
+            const typeLabel = (function(t){
+              switch(String(t||"")){
+                case 'page_view': return 'ページ閲覧';
+                case 'page_loaded': return 'ページ読み込み';
+                case 'view': return '表示（領域）';
+                case 'click': return 'クリック';
+                case 'scroll': return 'スクロール';
+                case 'form_submit': return 'フォーム送信';
+                default: return String(t||'').replace(/_/g,' ');
+              }
+            })(ev.type);
+            const feature = p.feature || ev.page || '';
+            const details = [];
+            if (p.elementId) details.push(`要素ID:${p.elementId}`);
+            if (p.element) details.push(`要素:${p.element}`);
+            if (p.text) details.push(`テキスト:\"${String(p.text).slice(0,120)}\"`);
+            if (p.durationMs) details.push(`滞在:${Math.round(p.durationMs/1000)}秒`);
+            if (p.maxScrollPct!=null) details.push(`スクロール:${p.maxScrollPct}%`);
+            if (p.utm) { try{ details.push(`utm:${JSON.stringify(p.utm)}`); }catch(e){} }
+            const op = `${typeLabel}${feature? '（' + feature + '）' : ''}${details.length? ' — ' + details.join('; ') : ''}`;
+            const combined = Object.assign({}, p || {});
+            if (ev.device) combined.device = ev.device;
+            const prettyProps = (()=>{ try{ return JSON.stringify(combined, null, 2); }catch{ return String(combined); } })();
+            data.push([ts, typeLabel, ev.sessionId || '', op, prettyProps]);
+          });
+          const ws = XLSX.utils.aoa_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, '表示中の明細(API)');
+          const now = new Date();
+          const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+          XLSX.writeFile(wb, `visible-event-details-api-${ts}.xlsx`);
+        } catch(e){
+          console.error('exportVisibleEventDetailsViaApi error', e);
+          alert('API 取得によるエクスポート中にエラーが発生しました。コンソールを確認してください。');
+        }
+      }
+      (function(){ const b = document.getElementById('exportVisibleDetailsViaApiXlsx'); if (b) b.addEventListener('click', exportVisibleEventDetailsViaApi); })();
+      // ログイン一覧（表示中）と、それらに対応する行動イベント（API取得）をまとめて1つのExcelに保存
+      async function exportCombinedVisibleAndEvents(){
+        try{
+          // 1) 集める: ログイン一覧の可視行をパースしてログインシート用データを作成
+          const loginRows = [];
+          document.querySelectorAll('#logsTableLogin tbody tr').forEach(tr=>{
+            const tds = tr.querySelectorAll('td');
+            if (!tds || tds.length < 6) return;
+            const datetime = (tds[2].textContent || '').trim();
+            const userId = (tds[3].textContent || '').trim();
+            const ip = (tds[4].textContent || '').trim();
+            const ua = (tds[5].textContent || '').trim();
+            loginRows.push([datetime, userId, ip, ua]);
+          });
+
+          // 2) targets: 各行に紐づく userId と期間を取得してイベントを API で取得
+          const targets = [];
+          document.querySelectorAll('#logsTableLogin tbody tr').forEach(tr=>{
+            const btn = tr.querySelector('button[data-action="toggle-events"]');
+            if (!btn) return;
+            const uid = (btn.getAttribute('data-userid')||'').trim();
+            if (!uid) return;
+            const sinceMs = Number(btn.getAttribute('data-since')) || 0;
+            const untilMs = Number(btn.getAttribute('data-until')) || (sinceMs + 6*60*60*1000);
+            const key = `${uid}::${sinceMs}::${untilMs}`;
+            if (!targets.find(t=>t.key===key)) targets.push({ key, uid, sinceMs, untilMs });
+          });
+
+          // 3) API でイベント取得（ページング）
+          const allItems = [];
+          for (const t of targets){
+            let page = 1;
+            const limit = 500;
+            while(true){
+              const resp = await apiGetEventsLog({ limit, page, userId: t.uid });
+              if (!resp || !Array.isArray(resp.items) || resp.items.length===0) break;
+              resp.items.forEach(it=>{
+                const tsMs = it.ts ? new Date(it.ts).getTime() : 0;
+                const matchesUser = (it.anonUserId && String(it.anonUserId)===String(t.uid)) || (it.userId && String(it.userId)===String(t.uid));
+                if (tsMs >= t.sinceMs && tsMs <= t.untilMs && matchesUser) allItems.push(it);
+              });
+              if (resp.items.length < limit) break;
+              page++;
+            }
+          }
+
+          // 4) シート用データ作成
+          const loginHeader = [["日時","ユーザーID","IP","User-Agent"]];
+          const loginData = loginHeader.concat(loginRows);
+
+          const eventHeader = [["日時","種類","セッションID","詳細","詳細表示テキスト"]];
+          // sort events by ts asc
+          allItems.sort((a,b)=> (new Date(a.ts).getTime()||0) - (new Date(b.ts).getTime()||0));
+          allItems.forEach(ev=>{
+            const ts = ev.ts ? new Date(ev.ts).toLocaleString('ja-JP') : '';
+            const p = ev.props || {};
+            const typeLabel = (function(t){
+              switch(String(t||"")){
+                case 'page_view': return 'ページ閲覧';
+                case 'page_loaded': return 'ページ読み込み';
+                case 'view': return '表示（領域）';
+                case 'click': return 'クリック';
+                case 'scroll': return 'スクロール';
+                case 'form_submit': return 'フォーム送信';
+                default: return String(t||'').replace(/_/g,' ');
+              }
+            })(ev.type);
+            const feature = p.feature || ev.page || '';
+            const details = [];
+            if (p.elementId) details.push(`要素ID:${p.elementId}`);
+            if (p.element) details.push(`要素:${p.element}`);
+            if (p.text) details.push(`テキスト:"${String(p.text).slice(0,120)}"`);
+            if (p.durationMs) details.push(`滞在:${Math.round(p.durationMs/1000)}秒`);
+            if (p.maxScrollPct!=null) details.push(`スクロール:${p.maxScrollPct}%`);
+            if (p.utm) { try{ details.push(`utm:${JSON.stringify(p.utm)}`); }catch(e){} }
+            const op = `${typeLabel}${feature? '（' + feature + '）' : ''}${details.length? ' — ' + details.join('; ') : ''}`;
+            const combined = Object.assign({}, p || {});
+            if (ev.device) combined.device = ev.device;
+            const prettyProps = (()=>{ try{ return JSON.stringify(combined, null, 2); }catch{ return String(combined); } })();
+            eventHeader.push([ts, typeLabel, ev.sessionId || '', op, prettyProps]);
+          });
+
+          const ws1 = XLSX.utils.aoa_to_sheet(loginData);
+          const ws2 = XLSX.utils.aoa_to_sheet(eventHeader);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws1, 'ログイン一覧');
+          XLSX.utils.book_append_sheet(wb, ws2, '行動イベント');
+          const now = new Date();
+          const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+          XLSX.writeFile(wb, `combined-logs-${ts}.xlsx`);
+        } catch(e){
+          console.error('exportCombinedVisibleAndEvents error', e);
+          alert('まとめてエクスポート中にエラーが発生しました。コンソールを確認してください。');
+        }
+      }
+      (function(){ const b = document.getElementById('exportCombinedLogsXlsx'); if (b) b.addEventListener('click', exportCombinedVisibleAndEvents); })();
+      // 顧客累計利用人数の読み込み（期間指定対応）
+      async function loadCustomerUserTotal(){
+        try {
+          const token = tokenInput.value.trim();
+          const headers = token ? { 'x-admin-token': token } : {};
+          const since = document.getElementById('since').value || '';
+          const until = document.getElementById('until').value || '';
+          const qs = new URLSearchParams();
+          if (since) qs.set('since', since);
+          if (until) qs.set('until', until);
+          const res = await fetch(`/api/stats/max-user-id${qs.toString()?('?' + qs.toString()):''}`, { headers });
+          if (!res.ok) throw new Error('failed');
+          const data = await res.json();
+          const el = document.getElementById('customer-user-total');
+          if (el) el.textContent = `最大ユーザーID: ${data.maxUserId}`;
+        } catch (e){
+          const el = document.getElementById('customer-user-total');
+          if (el) el.textContent = '最大ユーザーID: 取得失敗';
+        }
+      }
+      loadCustomerUserTotal();
+      // 入力変更時に再取得（トークンや期間変更を反映）
+      tokenInput.addEventListener('change', loadCustomerUserTotal);
+      document.getElementById('since').addEventListener('change', loadCustomerUserTotal);
+      document.getElementById('until').addEventListener('change', loadCustomerUserTotal);
+    </script>
+  </body>
+</html>

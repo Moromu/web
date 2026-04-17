@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マツゲンぽけっと👜</title>
+    <!-- PWA: manifest & iOS icon -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/images/icon.png">
+    <meta name="theme-color" content="#c30d23"/>
+    <link rel="stylesheet" href="../css/common.css" />
+    <link rel="stylesheet" href="../css/customer.css" />
+    <link rel="stylesheet" href="../css/specials-slider.css" />
+    <!-- Splide slider CSS -->
+    <!-- Splide slider removed; using composed promo card instead -->
+    <style>
+      /* ヘッダー直下のプロモカード用スタイルは外部CSSへ移譲 */
+      /* メッセージ（お知らせ）タイトルは改行して全表示 */
+      #messages .message-item .card-body h3 {
+        display: block;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        margin: 0 0 8px 0;
+      }
+      /* 本文は通常フローにし、カード全体でスクロール */
+      #messages .message-item .card-body p {
+        max-height: none;
+        overflow: visible;
+      }
+      /* タイトル＋本文を含むカード全体でスクロール可能にする */
+      #messages .message-item.card {
+        max-height: 240px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <img src="../images/ad/logo.png" alt="松源ロゴ" />
+            <h3 class="logo-text">
+              <span class="store-line1">和歌山</span>
+              <span class="store-line2">インター店</span>
+            </h3>
+          </div>
+          <!-- 顧客用モーフハンバーガー（≤1500pxで表示） -->
+          <button
+            class="hamburger-morph"
+            aria-label="メニュー"
+            aria-controls="cust-morph-menu"
+            aria-expanded="false"
+          >
+            <svg
+              class="hamburger-morph__icon"
+              width="38"
+              height="38"
+              viewBox="0 0 100 100"
+            >
+              <path
+                class="hamburger-morph__line"
+                d="M 20,29 H 80 C 80,29 94.5,28.817352 94.532987,66.711331 94.543142,77.980673 90.966081,81.670246 85.259173,81.668997 79.552261,81.667751 75.000211,74.999942 75.000211,74.999942 L 25.000021,25.000058"
+              />
+              <path class="hamburger-morph__line" d="M 20,50 H 80" />
+              <path
+                class="hamburger-morph__line"
+                d="M 20,71 H 80 C 80,71 94.5,71.182648 94.532987,33.288669 94.543142,22.019327 90.966081,18.329754 85.259173,18.331003 79.552261,18.332249 75.000211,25.000058 75.000211,25.000058 L 25.000021,74.999942"
+              />
+            </svg>
+          </button>
+          <nav>
+            <ul class="nav-links" id="nav-links">
+              <li><a href="#specials">お買い得商品</a></li>
+              <li><a href="#calendar">カレンダー</a></li>
+              <li><a href="#messages">店舗からのお知らせ</a></li>
+              <li><a href="#requests">ご要望・ご意見</a></li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </header>
+    <!-- 顧客用モーフメニュー本体（≤1500px時に開閉） -->
+    <nav id="cust-morph-menu" class="nav-morph" aria-hidden="true">
+      <div class="nav-morph__wrapper">
+        <ul class="nav-morph__list">
+          <li class="nav-morph__item">
+            <a href="#specials" class="nav-morph__link">
+              <span class="nav-morph__text">お買い得商品</span>
+              <span class="nav-morph__hover">お買い得商品</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#calendar" class="nav-morph__link">
+              <span class="nav-morph__text">カレンダー</span>
+              <span class="nav-morph__hover">カレンダー</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#messages" class="nav-morph__link">
+              <span class="nav-morph__text">店舗からのお知らせ</span>
+              <span class="nav-morph__hover">店舗からのお知らせ</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#requests" class="nav-morph__link">
+              <span class="nav-morph__text">ご要望・ご意見</span>
+              <span class="nav-morph__hover">ご要望・ご意見</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="container">
+        <!-- ヘッダー直下のプロモカード: 本日のイベント2件 + お買い得商品2件 を合成表示 -->
+        <div
+          id="ad-slider-container"
+          style="
+            width: 100%;
+            margin: 0 0 8px 0;
+            display: flex;
+            justify-content: center;
+          "
+        >
+          <div id="promo-card" style="width: 100%; max-width: 1200px">
+            <!-- JSで内容を生成 -->
+            <div
+              class="composed-card-placeholder"
+              style="
+                padding: 12px;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+                text-align: center;
+                color: #888;
+              "
+            >
+              表示を読み込んでいます...
+            </div>
+          </div>
+        </div>
+
+        <!-- お買い得商品セクション -->
+        <section id="specials" class="section">
+          <div class="section-header">
+            <h2>🛒 お買い得商品</h2>
+          </div>
+          <div class="section-content">
+            <div class="specials-slider" id="specials-slider">
+              <div class="specials-slider-track" id="specials-slider-track">
+                <!-- JSでお買い得商品カードを生成 -->
+              </div>
+              <div class="specials-slider-nav">
+                <button id="specials-prev" aria-label="前へ">◀</button>
+                <button id="specials-next" aria-label="次へ">▶</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- カレンダーセクション -->
+        <section id="calendar" class="section">
+          <div class="section-header">
+            <h2>📅 2週間イベントカレンダー</h2>
+          </div>
+          <div class="section-content">
+            <div class="calendar-two-col">
+              <aside class="calendar-side">
+                <div class="calendar-detail-card2" id="calendar-detail-card">
+                  <h3 class="calendar-detail-title" id="calendar-detail-title">
+                    本日の予定
+                  </h3>
+                  <div id="calendar-detail-content"></div>
+                </div>
+              </aside>
+              <div class="calendar-main">
+                <div class="calendar-container">
+                  <div class="calendar-header">
+                    <button class="btn-nav" onclick="previous2Weeks()">
+                      ◀
+                    </button>
+                    <h3 id="current-2weeks"></h3>
+                    <button class="btn-nav" onclick="next2Weeks()">▶</button>
+                  </div>
+                  <div
+                    class="calendar-2weeks-grid"
+                    id="calendar-2weeks-grid"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 店舗からのメッセージセクション -->
+        <section id="messages" class="section">
+          <div class="section-header">
+            <h2>💬 店舗からのお知らせ</h2>
+          </div>
+          <div class="section-content">
+            <div class="messages-container">
+              <p class="text-center">現在、お知らせはありません</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ご要望・ご意見セクション -->
+        <section id="requests" class="section">
+          <div class="section-header">
+            <h2>📝 ご要望・ご意見</h2>
+          </div>
+          <div class="section-content">
+            <div class="request-form">
+              <form id="customer-request-form">
+                <div class="form-group">
+                  <label class="form-label" for="category">カテゴリー</label>
+                  <select
+                    class="form-select"
+                    id="category"
+                    name="category"
+                    required
+                  >
+                    <option value="">選択してください</option>
+                    <option value="product">商品について</option>
+                    <option value="service">サービスについて</option>
+                    <option value="store">店舗について</option>
+                    <option value="event">イベントの提案</option>
+                    <option value="other">その他</option>
+                  </select>
+                </div>
+                <!-- 件名入力欄は削除 -->
+                <div class="form-group">
+                  <label class="form-label" for="message">メッセージ</label>
+                  <textarea
+                    class="form-textarea"
+                    id="message"
+                    name="message"
+                    rows="5"
+                    placeholder="ご要望やご意見をお聞かせください"
+                    required
+                  ></textarea>
+                </div>
+                <!-- お名前入力欄は削除 -->
+                <button type="submit" class="btn">送信する</button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- レシピモーダル -->
+    <div id="recipe-modal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="recipe-content">
+          <!-- レシピ内容はJavaScriptで表示 -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // file:// で開いた場合も API を localhost:8787 に向ける
+      if (location.protocol === "file:") {
+        window.API_BASE_URL = window.API_BASE_URL || "http://localhost:8787";
+      }
+    </script>
+    <script type="module">
+      import {
+        apiGetPublishedMessages,
+        apiGetEvents,
+        apiGetSpecials,
+        apiGetActiveSpecials,
+        apiAddComment,
+        apiGetComments,
+        apiLogLogin,
+        apiLogEvent,
+      } from "../js/api-client.js";
+      window.__api = Object.assign({}, window.__api || {}, {
+        apiGetPublishedMessages,
+        apiGetEvents,
+        apiGetSpecials,
+        apiGetActiveSpecials,
+        apiAddComment,
+        apiGetComments,
+        apiLogLogin,
+        apiLogEvent,
+      });
+    </script>
+    <script src="../js/customer.js"></script>
+    <script>
+      // 顧客ページ用 モーフメニュー初期化（≤1500px時のみボタン表示）
+      document.addEventListener("DOMContentLoaded", () => {
+        const header = document.querySelector(".header");
+        const hamburger = header.querySelector(".hamburger-morph");
+        const nav = document.getElementById("cust-morph-menu");
+        if (!hamburger || !nav) return;
+        const onClick = () => {
+          hamburger.classList.toggle("active");
+          nav.classList.toggle("active");
+          const isOpen = hamburger.classList.contains("active");
+          hamburger.setAttribute("aria-expanded", isOpen);
+          nav.setAttribute("aria-hidden", !isOpen);
+          document.body.style.overflow = isOpen ? "hidden" : "";
+        };
+        hamburger.addEventListener("click", onClick);
+        // hover効果のフォールバック（タッチでも安全）
+        const menuLinks = nav.querySelectorAll(".nav-morph__link");
+        menuLinks.forEach((link) => {
+          // クリック時は対象位置へスクロールしメニューを閉じる
+          link.addEventListener("click", (e) => {
+            const href = link.getAttribute("href");
+            if (href && href.startsWith("#")) {
+              e.preventDefault();
+              const target = document.querySelector(href);
+              if (target) {
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+              hamburger.classList.remove("active");
+              nav.classList.remove("active");
+              hamburger.setAttribute("aria-expanded", "false");
+              nav.setAttribute("aria-hidden", "true");
+              document.body.style.overflow = "";
+              // 念のため従来のモバイルメニューも閉じる（重複表示の抑制）
+              const legacy = document.getElementById("nav-links");
+              if (legacy) legacy.classList.remove("active");
+            }
+          });
+        });
+      });
+    </script>
+    <script>
+      // 2週間カレンダー用
+      let twoWeeksStart = new Date();
+      twoWeeksStart.setDate(twoWeeksStart.getDate() - 7); // 現在日から1週間前
+      const today2 = new Date();
+
+      function renderDetailPanel(dateObj) {
+        const contentEl = document.getElementById("calendar-detail-content");
+        const titleEl = document.getElementById("calendar-detail-title");
+        if (!contentEl || !titleEl) return;
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const d = String(dateObj.getDate()).padStart(2, "0");
+        const dateStr = `${y}-${m}-${d}`;
+        const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+        const week = weekDays[dateObj.getDay()];
+        titleEl.textContent =
+          dateObj.toDateString() === today2.toDateString()
+            ? "本日の予定"
+            : `${m}/${d}(${week}) の予定`;
+        const events = window.getEventsForDate ? getEventsForDate(dateStr) : [];
+        let html = "";
+        if (!events.length) {
+          html = `<div style='color:#666'>イベントはありません</div>`;
+        } else {
+          events.forEach((ev) => {
+            let icon = ev.image || "../images/icon/event.png";
+            let label = "イベント";
+            if (ev.type === "special-sale") {
+              icon = ev.image || "../images/icon/sale.png";
+              label = "特売日";
+            }
+            html += `<div style='display:flex;align-items:center;gap:10px;margin:10px 0;'>
+                <img src='${icon}' alt='${label}' style='width:40px;height:40px;object-fit:contain;'>
+                <div>${ev.text || label}</div>
+              </div>`;
+          });
+        }
+        contentEl.innerHTML = html;
+      }
+
+      function generate2WeeksCalendar() {
+        const grid = document.getElementById("calendar-2weeks-grid");
+        const header = document.getElementById("current-2weeks");
+        grid.innerHTML = "";
+        let days = [];
+        for (let i = 0; i < 14; i++) {
+          const d = new Date(twoWeeksStart);
+          d.setDate(twoWeeksStart.getDate() + i);
+          days.push(d);
+        }
+        if (header) {
+          const sY = days[0].getFullYear();
+          const sM = days[0].getMonth() + 1;
+          const eY = days[13].getFullYear();
+          const eM = days[13].getMonth() + 1;
+          const startStr = `${sY}年${sM}月`;
+          const endStr = `${eY}年${eM}月`;
+          // 月がまたがる場合は改行で表示（例: "2025年11月<br>2025年12月"）
+          if (sY === eY && sM === eM) {
+            header.textContent = startStr;
+          } else {
+            header.innerHTML = `${startStr}<br>${endStr}`;
+          }
+        }
+        const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+        let selectedDateStr = window.selectedDateStr || null;
+        // 左パネル初期表示（選択なしの場合は今日）
+        if (!selectedDateStr) {
+          renderDetailPanel(today2);
+        }
+        {
+          // 通常カレンダー表示
+          // 1週目（0-6）
+          const row1 = document.createElement("div");
+          row1.style.display = "contents";
+          // 2週目（7-13）
+          const row2 = document.createElement("div");
+          row2.style.display = "contents";
+
+          days.slice(0, 7).forEach((dateObj) => {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const d = String(dateObj.getDate()).padStart(2, "0");
+            const dateStr = `${y}-${m}-${d}`;
+            const events = window.getEventsForDate
+              ? getEventsForDate(dateStr)
+              : [];
+            const cell = document.createElement("div");
+            cell.className = "calendar-2weeks-day";
+            if (dateObj.toDateString() === today2.toDateString()) {
+              cell.classList.add("today");
+            }
+            // 昨日を含むそれより以前は past として扱う
+            const norm = new Date(
+              dateObj.getFullYear(),
+              dateObj.getMonth(),
+              dateObj.getDate()
+            );
+            const normToday = new Date(
+              today2.getFullYear(),
+              today2.getMonth(),
+              today2.getDate()
+            );
+            const normYesterday = new Date(normToday);
+            normYesterday.setDate(normToday.getDate() - 1);
+            if (norm.getTime() <= normYesterday.getTime()) {
+              cell.classList.add("past");
+            }
+            // 選択中ハイライト
+            if (selectedDateStr) {
+              const ymd = `${y}-${m}-${d}`;
+              if (ymd === selectedDateStr) cell.classList.add("selected");
+            }
+            const weekDayStr = weekDays[dateObj.getDay()];
+            let weekDayColor = "#888";
+            if (dateObj.getDay() === 0) weekDayColor = "#e44"; // 日曜 赤
+            if (dateObj.getDay() === 6) weekDayColor = "#2277ee"; // 土曜 青
+            // イベント有無でクラス分岐（スタイルはCSSで定義）
+            cell.classList.add(events.length ? "has-events" : "no-events");
+            const isFirstOfMonth = dateObj.getDate() === 1;
+            const labelStr = isFirstOfMonth
+              ? `${dateObj.getMonth() + 1}/${dateObj.getDate()}`
+              : `${dateObj.getDate()}`;
+            cell.innerHTML = `<div class='date-label'>${labelStr}<br><span style='font-size:0.9em;color:${weekDayColor};'>(${weekDayStr})</span></div>`;
+            if (events.length) {
+              const wrap = document.createElement("div");
+              wrap.className = "icons";
+              events.forEach((ev) => {
+                const img = document.createElement("img");
+                const iconSize =
+                  window.innerWidth <= 375
+                    ? 24
+                    : window.innerWidth <= 430
+                    ? 28
+                    : 32;
+                img.style.width = iconSize + "px";
+                img.style.height = iconSize + "px";
+                img.style.objectFit = "contain";
+                img.style.verticalAlign = "middle";
+                // Prefer specific image saved with the event; fall back to type defaults
+                if (ev.image) {
+                  img.src = ev.image;
+                  img.alt =
+                    ev.text ||
+                    (ev.type === "special-sale" ? "特売日" : "イベント");
+                } else if (ev.type === "special-sale") {
+                  img.src = "../images/icon/sale.png";
+                  img.alt = "特売日";
+                } else {
+                  img.src = "../images/icon/event.png";
+                  img.alt = "イベント";
+                }
+                wrap.appendChild(img);
+              });
+              cell.appendChild(wrap);
+            }
+            cell.addEventListener("click", function () {
+              window.selectedDateStr = dateStr;
+              renderDetailPanel(dateObj);
+              // 選択ハイライト更新
+              document
+                .querySelectorAll(".calendar-2weeks-day.selected")
+                .forEach((el) => el.classList.remove("selected"));
+              cell.classList.add("selected");
+              try {
+                if (window.logEvent)
+                  window.logEvent("calendar_click", { date: dateStr });
+              } catch {}
+            });
+            row1.appendChild(cell);
+          });
+
+          days.slice(7, 14).forEach((dateObj) => {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const d = String(dateObj.getDate()).padStart(2, "0");
+            const dateStr = `${y}-${m}-${d}`;
+            const events = window.getEventsForDate
+              ? getEventsForDate(dateStr)
+              : [];
+            const cell = document.createElement("div");
+            cell.className = "calendar-2weeks-day";
+            if (dateObj.toDateString() === today2.toDateString()) {
+              cell.classList.add("today");
+            }
+            // 昨日を含むそれより以前は past として扱う
+            const norm2 = new Date(
+              dateObj.getFullYear(),
+              dateObj.getMonth(),
+              dateObj.getDate()
+            );
+            const normToday2 = new Date(
+              today2.getFullYear(),
+              today2.getMonth(),
+              today2.getDate()
+            );
+            const normYesterday2 = new Date(normToday2);
+            normYesterday2.setDate(normToday2.getDate() - 1);
+            if (norm2.getTime() <= normYesterday2.getTime()) {
+              cell.classList.add("past");
+            }
+            if (selectedDateStr) {
+              const ymd = `${y}-${m}-${d}`;
+              if (ymd === selectedDateStr) cell.classList.add("selected");
+            }
+            const weekDayStr = weekDays[dateObj.getDay()];
+            let weekDayColor = "#888";
+            if (dateObj.getDay() === 0) weekDayColor = "#e44"; // 日曜 赤
+            if (dateObj.getDay() === 6) weekDayColor = "#2277ee"; // 土曜 青
+            // イベント有無でクラス分岐（スタイルはCSSで定義）
+            cell.classList.add(events.length ? "has-events" : "no-events");
+            const isFirstOfMonth2 = dateObj.getDate() === 1;
+            const labelStr2 = isFirstOfMonth2
+              ? `${dateObj.getMonth() + 1}/${dateObj.getDate()}`
+              : `${dateObj.getDate()}`;
+            cell.innerHTML = `<div class='date-label'>${labelStr2}<br><span style='font-size:0.9em;color:${weekDayColor};'>(${weekDayStr})</span></div>`;
+            if (events.length) {
+              const wrap = document.createElement("div");
+              wrap.className = "icons";
+              events.forEach((ev) => {
+                const img = document.createElement("img");
+                const iconSize =
+                  window.innerWidth <= 375
+                    ? 24
+                    : window.innerWidth <= 430
+                    ? 28
+                    : 32;
+                img.style.width = iconSize + "px";
+                img.style.height = iconSize + "px";
+                img.style.objectFit = "contain";
+                img.style.verticalAlign = "middle";
+                if (ev.image) {
+                  img.src = ev.image;
+                  img.alt =
+                    ev.text ||
+                    (ev.type === "special-sale" ? "特売日" : "イベント");
+                } else if (ev.type === "special-sale") {
+                  img.src = "../images/icon/sale.png";
+                  img.alt = "特売日";
+                } else {
+                  img.src = "../images/icon/event.png";
+                  img.alt = "イベント";
+                }
+                wrap.appendChild(img);
+              });
+              cell.appendChild(wrap);
+            }
+            cell.addEventListener("click", function () {
+              window.selectedDateStr = dateStr;
+              renderDetailPanel(dateObj);
+              document
+                .querySelectorAll(".calendar-2weeks-day.selected")
+                .forEach((el) => el.classList.remove("selected"));
+              cell.classList.add("selected");
+              try {
+                if (window.logEvent)
+                  window.logEvent("calendar_click", { date: dateStr });
+              } catch {}
+            });
+            row2.appendChild(cell);
+          });
+
+          grid.appendChild(row1);
+          grid.appendChild(row2);
+        }
+      }
+
+      function previous2Weeks() {
+        window.selectedDateStr = null;
+        twoWeeksStart.setDate(twoWeeksStart.getDate() - 14);
+        generate2WeeksCalendar();
+      }
+      function next2Weeks() {
+        window.selectedDateStr = null;
+        twoWeeksStart.setDate(twoWeeksStart.getDate() + 14);
+        generate2WeeksCalendar();
+      }
+
+      // 初回は eventsDataReady (customer.js 側でイベント取得完了後) に描画し、
+      // 取得が遅延/失敗した場合のみフォールバックで遅延描画。
+      let __twoWeeksCalRendered = false;
+      function __renderTwoWeeksOnce() {
+        if (__twoWeeksCalRendered) return;
+        try {
+          generate2WeeksCalendar();
+          __twoWeeksCalRendered = true;
+        } catch (e) {
+          console.warn("two-weeks calendar render failed", e);
+        }
+      }
+      // customer.js で eventsDataReady を dispatch
+      window.addEventListener("eventsDataReady", () => {
+        __renderTwoWeeksOnce();
+      });
+      // フォールバック: 2秒以内に eventsDataReady が来ない場合は空でも一旦描画
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => __renderTwoWeeksOnce(), 2000);
+      });
+    </script>
+    <script>
+      // スライダー用データ（元の3商品を流用）
+      // お買い得商品スライダーの静的データ定義は削除し、
+      // js/customer.js 内の initSpecialsSlider() が API (/api/specials) から動的生成します。
+    </script>
+    <script>
+      // Fallback retries for promo-card rendering.
+      // If the placeholder still exists after page load (intermittent load/order issues), retry rendering.
+      document.addEventListener("DOMContentLoaded", function () {
+        function tryRender() {
+          try {
+            var placeholder = document.querySelector(
+              "#promo-card .composed-card-placeholder"
+            );
+            if (placeholder && window.renderPromoCard) {
+              try {
+                window.renderPromoCard();
+              } catch (e) {
+                console.warn("promo retry failed", e);
+              }
+            }
+          } catch (e) {}
+        }
+        setTimeout(tryRender, 1500);
+        setTimeout(tryRender, 5000);
+      });
+    </script>
+  </body>
+</html>

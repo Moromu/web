@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マツゲンぽけっと　管理システム</title>
+    <link rel="stylesheet" href="../css/common.css" />
+    <link rel="stylesheet" href="../css/staff.css" />
+  </head>
+  <body class="admin-page">
+    <header class="header admin-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <h1>マツゲンぽけっと 管理</h1>
+            <span class="admin-badge">管理</span>
+          </div>
+          <!-- スタッフ用は常時モーフハンバーガー表示 -->
+          <button class="hamburger-morph" aria-label="メニュー" aria-controls="staff-morph-menu" aria-expanded="false">
+            <svg class="hamburger-morph__icon" width="38" height="38" viewBox="0 0 100 100">
+              <path class="hamburger-morph__line" d="M 20,29 H 80 C 80,29 94.5,28.817352 94.532987,66.711331 94.543142,77.980673 90.966081,81.670246 85.259173,81.668997 79.552261,81.667751 75.000211,74.999942 75.000211,74.999942 L 25.000021,25.000058" />
+              <path class="hamburger-morph__line" d="M 20,50 H 80" />
+              <path class="hamburger-morph__line" d="M 20,71 H 80 C 80,71 94.5,71.182648 94.532987,33.288669 94.543142,22.019327 90.966081,18.329754 85.259173,18.331003 79.552261,18.332249 75.000211,25.000058 75.000211,25.000058 L 25.000021,74.999942" />
+            </svg>
+          </button>
+          <nav>
+            <ul class="nav-links" id="nav-links">
+              <li><a href="#special-mgmt">お買い得商品</a></li>
+              <li><a href="#event-mgmt">カレンダー</a></li>
+              <li><a href="#message-mgmt">メッセージ</a></li>
+              <li><a href="#request-mgmt">要望</a></li>
+              <li><a href="logs.html">ログ/エクスポート</a></li>
+              <li><a href="#" id="open-admin-token">設定</a></li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </header>
+    <!-- スタッフ用モーフメニュー本体（常時） -->
+    <nav id="staff-morph-menu" class="nav-morph" aria-hidden="true">
+      <div class="nav-morph__wrapper">
+        <ul class="nav-morph__list">
+          <li class="nav-morph__item">
+            <a href="#special-mgmt" class="nav-morph__link">
+              <span class="nav-morph__text">お買い得商品</span>
+              <span class="nav-morph__hover">お買い得商品</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#event-mgmt" class="nav-morph__link">
+              <span class="nav-morph__text">カレンダー</span>
+              <span class="nav-morph__hover">カレンダー</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#message-mgmt" class="nav-morph__link">
+              <span class="nav-morph__text">メッセージ</span>
+              <span class="nav-morph__hover">メッセージ</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <a href="#request-mgmt" class="nav-morph__link">
+              <span class="nav-morph__text">要望</span>
+              <span class="nav-morph__hover">要望</span>
+            </a>
+          </li>
+          <li class="nav-morph__item">
+            <!-- ログ/エクスポートと設定はメニューから削除 -->
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <div class="admin-alert">⚠ 管理画面。取り扱いにご注意ください。</div>
+        <script>
+          // スタッフページ用 モーフメニュー初期化（常時ボタン表示）
+          document.addEventListener('DOMContentLoaded', () => {
+            const header = document.querySelector('.header');
+            const hamburger = header.querySelector('.hamburger-morph');
+            const nav = document.getElementById('staff-morph-menu');
+            if (!hamburger || !nav) return;
+            const onClick = () => {
+              hamburger.classList.toggle('active');
+              nav.classList.toggle('active');
+              const isOpen = hamburger.classList.contains('active');
+              hamburger.setAttribute('aria-expanded', isOpen);
+              nav.setAttribute('aria-hidden', !isOpen);
+              document.body.style.overflow = isOpen ? 'hidden' : '';
+            };
+            hamburger.addEventListener('click', onClick);
+            const menuLinks = nav.querySelectorAll('.nav-morph__link');
+            menuLinks.forEach(link => {
+              // ホバー演出はCSSに統一（微小な持ち上がり）。JSでは操作しない。
+              // クリック時は対象位置へスクロールしメニューを閉じる
+              link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href');
+                const isHash = !!href && href.startsWith('#');
+                if (isHash) {
+                  e.preventDefault();
+                  const target = document.querySelector(href);
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }
+                // ハッシュ以外（logs.html や 設定リンク）でもメニューを閉じる
+                hamburger.classList.remove('active');
+                nav.classList.remove('active');
+                hamburger.setAttribute('aria-expanded', 'false');
+                nav.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                // 設定リンクはモーダル起動のため既存ハンドラに委譲（preventDefaultしない）
+              });
+            });
+          });
+        </script>
+    <main class="main-content">
+      <div class="container"></div>
+
+        <!-- お買い得商品管理セクション（先頭） -->
+        <section id="special-mgmt" class="section">
+          <div class="section-header">
+            <h2>🛒 お買い得商品管理</h2>
+          </div>
+          <div class="section-content">
+            <div class="management-grid grid-2">
+              <div class="add-special-form card">
+                <div class="card-header">お買い得商品追加</div>
+                <div class="card-body">
+                  <form id="add-special-form">
+                    <div class="form-group">
+                      <label class="form-label">お買い得商品期間</label>
+                      <div class="date-range-container">
+                        <div class="date-input-group">
+                          <label class="sub-label">開始日</label>
+                          <input
+                            type="date"
+                            class="form-input"
+                            name="startDate"
+                            required
+                          />
+                        </div>
+                        <div class="date-input-group">
+                          <label class="sub-label">終了日（任意）</label>
+                          <input
+                            type="date"
+                            class="form-input"
+                            name="endDate"
+                          />
+                        </div>
+                      </div>
+                      <small class="form-hint"
+                        >終了日を設定しない場合は開始日のみのお買い得商品になります</small
+                      >
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">商品名</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        name="name"
+                        id="specialProductName"
+                        placeholder="例：国産牛肉（肩ロース）"
+                        required
+                      />
+                      <br />
+                      <label class="form-label">画像URL（自動取得）</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        name="imageUrl"
+                        id="specialImageUrl"
+                        placeholder="商品名を入力すると候補を表示します"
+                        readonly
+                        style="width: 80%"
+                      />
+                      <div
+                        id="specialImagePreview"
+                        style="margin-top: 8px"
+                      ></div>
+                      <div
+                        id="specialImageCandidates"
+                        style="margin-top: 8px"
+                      ></div>
+                    </div>
+                    <!-- 通常価格入力は廃止されました -->
+                    <div class="form-group">
+                      <label class="form-label">お買い得価格</label>
+                      <input
+                        type="number"
+                        class="form-input"
+                        name="salePrice"
+                        placeholder="1260"
+                        required
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">単位（任意）</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        name="unit"
+                        id="specialUnit"
+                        placeholder="例：100gあたり／1本／1パック"
+                      />
+                      <small class="form-hint">入力した場合のみ保存・表示されます</small>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">商品説明</label>
+                      <textarea
+                        class="form-textarea"
+                        name="description"
+                        rows="2"
+                        placeholder="商品の特徴や魅力"
+                      ></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">レシピ名</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        name="recipeIdea"
+                        placeholder="例：牛肉のしぐれ煮"
+                      />
+                      <input type="hidden" name="recipeDetails" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">種別</label>
+                      <label style="display:inline-flex; align-items:center; gap:6px;">
+                        <input type="checkbox" name="nonFood" id="nonFoodFlag" /> 食品以外（レシピなし）
+                      </label>
+                      <small class="form-hint">チェック時は商品説明のみを登録（レシピは保存しません）</small>
+                    </div>
+                    <div class="form-group">
+                      <!-- 商品画像選択欄は不要なので削除 -->
+                    </div>
+                    <div class="form-group">
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="generateAIContent('special')"
+                      >
+                        🤖 AIで商品説明を生成
+                      </button>
+                    </div>
+                    <button type="submit" class="btn">お買い得商品を追加</button>
+                  </form>
+                  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+                  <script>
+                    document
+                      .getElementById("specialProductName")
+                      .addEventListener("change", searchSpecialImageUrl);
+                    document
+                      .getElementById("specialProductName")
+                      .addEventListener("blur", searchSpecialImageUrl);
+
+                    // タイピング中にも候補を更新
+                    document
+                      .getElementById("specialProductName")
+                      .addEventListener("input", searchSpecialImageUrl);
+
+                    // images/product(name.xlsx) または images/products(name.xlsx) を読み込み、全シートを結合
+                    let __nameSheetCache = null; // { rows, baseDir }
+                    // 選択済みの画像URL（候補を選択したときにセット）。商品名を編集してもこれは維持される。
+                    let selectedSpecialImageUrl = null;
+
+                    async function loadProductNameSheet() {
+                      if (__nameSheetCache) return __nameSheetCache;
+                      const sources = [
+                        {
+                          baseDir: "../images/product",
+                          xlsx: "../images/product/name.xlsx",
+                        },
+                        {
+                          baseDir: "../images/products",
+                          xlsx: "../images/products/name.xlsx",
+                        },
+                      ];
+                      let lastErr = null;
+                      for (const s of sources) {
+                        try {
+                          const res = await fetch(s.xlsx);
+                          if (!res.ok)
+                            throw new Error("fetch failed: " + s.xlsx);
+                          const arrayBuffer = await res.arrayBuffer();
+                          const data = new Uint8Array(arrayBuffer);
+                          const workbook = XLSX.read(data, { type: "array" });
+                          const rows = [];
+                          for (const sn of workbook.SheetNames) {
+                            const sh = workbook.Sheets[sn];
+                            const r = XLSX.utils.sheet_to_json(sh, {
+                              header: 1,
+                              defval: "",
+                            });
+                            for (let i = 0; i < r.length; i++) rows.push(r[i]);
+                          }
+                          __nameSheetCache = { rows, baseDir: s.baseDir };
+                          return __nameSheetCache;
+                        } catch (e) {
+                          lastErr = e;
+                          // 次候補へフォールバック
+                        }
+                      }
+                      var _msg =
+                        lastErr && lastErr.message
+                          ? lastErr.message
+                          : String(lastErr);
+                      throw new Error(
+                        "name.xlsx の取得に失敗しました: " + _msg
+                      );
+                    }
+
+                    function normalizeJP(s) {
+                      try {
+                        return String(s || "")
+                          .normalize("NFKC")
+                          .toLowerCase()
+                          .replace(/[\u200B-\u200D\uFEFF]/g, "");
+                      } catch {
+                        return String(s || "").toLowerCase();
+                      }
+                    }
+
+                    function renderCandidates(cands, keyword) {
+                      const box = document.getElementById(
+                        "specialImageCandidates"
+                      );
+                      const previewDiv = document.getElementById(
+                        "specialImagePreview"
+                      );
+                      // 候補表示時でも、既に選択済みの画像があればプレビューは保持する。
+                      if (!cands.length) {
+                        box.innerHTML = `<div style="color:#666">「${keyword}」を含む候補が見つかりませんでした。</div>`;
+                        return;
+                      }
+                      const items = cands
+                        .slice(0, 20)
+                        .map(({ name, filename }) => {
+                          const safeName = String(name || "")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;");
+                          const safeFile = String(filename || "")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;");
+                          return `<button type="button" class="btn btn-light" data-fn="${safeFile}" data-name="${safeName}" style="margin:4px;">${safeName}</button>`;
+                        })
+                        .join("");
+                      box.innerHTML = `<div style="margin-top:4px">候補から選択してください：</div><div>${items}</div>`;
+                      // クリックで反映
+                      box.querySelectorAll("button[data-fn]").forEach((btn) => {
+                        btn.addEventListener("click", () => {
+                          const filename = btn.getAttribute("data-fn");
+                          const pname = btn.getAttribute("data-name");
+                          const base =
+                            __nameSheetCache && __nameSheetCache.baseDir
+                              ? __nameSheetCache.baseDir
+                              : "../images/product";
+                          const url = `${base}/${filename}`;
+                          document.getElementById("specialImageUrl").value =
+                            url;
+                          document.getElementById("specialProductName").value =
+                            pname;
+                          // 選択時に選択済み画像を保持する
+                          selectedSpecialImageUrl = url;
+                          previewDiv.innerHTML = `<img src="${url}" alt="${pname}" style="max-width:200px;">`;
+                          box.innerHTML = "";
+                        });
+                      });
+                    }
+
+                    async function searchSpecialImageUrl() {
+                      const productName = document
+                        .getElementById("specialProductName")
+                        .value.trim();
+                      const box = document.getElementById(
+                        "specialImageCandidates"
+                      );
+                      const previewDiv = document.getElementById(
+                        "specialImagePreview"
+                      );
+                      if (!productName) {
+                        document.getElementById("specialImageUrl").value = "";
+                        box.innerHTML = "";
+                        previewDiv.innerHTML = "";
+                        // 名前が空になったら選択状態をリセット
+                        selectedSpecialImageUrl = null;
+                        return;
+                      }
+                      try {
+                        const { rows } = await loadProductNameSheet();
+                        const kw = normalizeJP(productName);
+                        const cands = [];
+                        for (let i = 1; i < rows.length; i++) {
+                          const rawName = String(rows[i][0] || "");
+                          const rawFile = String(rows[i][1] || "");
+                          const name = rawName.trim();
+                          const filename = rawFile.trim();
+                          if (!name || !filename) continue;
+                          if (normalizeJP(name).includes(kw)) {
+                            cands.push({ name, filename });
+                          }
+                        }
+                        renderCandidates(cands, productName);
+                      } catch (err) {
+                        document.getElementById("specialImageUrl").value = "";
+                        box.innerHTML = "";
+                        previewDiv.textContent =
+                          "商品名候補の読み込みに失敗しました。name.xlsx と images/product(s)/ を確認してください。";
+                      }
+                    }
+                  </script>
+                </div>
+              </div>
+
+              <div class="special-list card">
+                <div
+                  class="card-header collapsible-header collapsed"
+                  onclick="toggleCollapse('special-list-body')"
+                >
+                  <span>現在のお買い得商品</span>
+                  <button id="btn-show-past-specials" class="btn" style="margin-left:12px;">過去の商品</button>
+                  <span class="collapse-icon">▼</span>
+                </div>
+                    <button id="btn-toggle-reorder" class="btn btn-secondary" style="margin-left:8px;">並び替え</button>
+                    <button id="btn-save-order" class="btn btn-success" style="margin-left:8px; display:none;">順序を保存</button>
+                <div
+                  class="card-body collapsible-body"
+                  id="special-list-body"
+                >
+                  <div id="special-list-content">
+                    <!-- お買い得商品リストはJavaScriptで生成 -->
+                  </div>
+                  <!-- 過去お買い得商品表示領域（初期非表示） -->
+                  <div id="past-special-list" style="display:none; margin-top:12px;">
+                    <div style="justify-content:space-between; align-items:center; margin-bottom:8px;">
+                      <strong>過去のお買い得商品</strong>
+                      <div>
+                        <button id="btn-delete-selected-past-specials" class="btn btn-danger btn-small">選択削除</button>
+                        <button id="btn-delete-all-past-specials" class="btn btn-danger btn-small">過去のお買い得商品を全削除</button>
+                        <button id="btn-hide-past-specials" class="btn btn-small">閉じる</button>
+                      </div>
+                    </div>
+                    <div id="past-special-list-content"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 特売リスト出力 -->
+              <div class="special-export card">
+                <div class="card-header">🖨 特売リスト出力（A4）</div>
+                <div class="card-body">
+                  <div class="form-group">
+                    <label class="form-label">対象期間</label>
+                    <div class="date-range-container">
+                      <div class="date-input-group">
+                        <label class="sub-label">開始日</label>
+                        <input type="date" class="form-input" id="export-start" />
+                      </div>
+                      <div class="date-input-group">
+                        <label class="sub-label">終了日</label>
+                        <input type="date" class="form-input" id="export-end" />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <button class="btn" id="btn-build-export">リスト作成</button>
+                  </div>
+                    <div class="export-controls no-print" id="export-controls" style="display:none; gap: 0.75rem; align-items:center; margin: 0.5rem 0 1rem; flex-wrap: wrap;">
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="toggle-recipe" /> レシピを表示</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="toggle-desc" /> 商品説明を表示</label>
+                    <div style="display:flex; gap: 0.5rem; align-items:center;">
+                      <button class="btn btn-secondary" type="button" id="btn-select-all">全選択</button>
+                      <button class="btn btn-secondary" type="button" id="btn-deselect-all">全解除</button>
+                    </div>
+                    <div style="display:flex; gap: 0.5rem; align-items:center; margin-left:auto;">
+                      <input type="password" id="admin-token-inline-input" placeholder="管理トークン" style="padding:6px 8px; width:180px;" />
+                      <button class="btn btn-secondary" type="button" id="btn-save-admin-token">保存</button>
+                    </div>
+                    <button class="btn" id="btn-download-pdf">A4でダウンロード</button>
+                  </div>
+                  <div id="export-preview" class="export-preview-container">
+                    <!-- リストプレビューがここに表示されます -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- イベント管理セクション（後置） -->
+        <section id="event-mgmt" class="section">
+          <div class="section-header">
+            <h2>🎉 イベント管理</h2>
+          </div>
+          <div class="section-content">
+            <div class="management-grid grid-2">
+              <!-- イベント追加フォーム -->
+              <div class="add-event-form card">
+                <div class="card-header">イベント追加</div>
+                <div class="card-body">
+                  <form id="add-event-form">
+                    <div class="form-group">
+                      <label class="form-label">期間</label>
+                      <div class="date-range-container">
+                        <div class="date-input-group">
+                          <label class="sub-label">開始</label>
+                          <input type="date" class="form-input" name="startDate" required />
+                        </div>
+                        <div class="date-input-group">
+                          <label class="sub-label">終了（任意）</label>
+                          <input type="date" class="form-input" name="endDate" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">種類</label>
+                      <select class="form-select" name="type" required>
+                        <option value="reservation-start">予約開始</option>
+                        <option value="arrival">入荷</option>
+                        <option value="event">イベント</option>
+                      </select>
+                    </div>
+                    <div class="form-group" id="event-name-group" style="display:none;">
+                      <label class="form-label">イベント名（例：クリスマス）</label>
+                      <input type="text" class="form-input" name="eventName" id="eventNameInput" placeholder="イベント名を入力するとアイコンを自動検索します" />
+                      <small class="form-hint">イベントを選択したときのみ表示。部分一致でアイコンを検索します。</small>
+                    </div>
+                    <input type="hidden" name="image" id="eventImageInput" />
+                    <div id="eventIconPreview" style="margin-top:8px"></div>
+                    <div class="form-group">
+                      <label class="form-label">内容</label>
+                      <input type="text" class="form-input" name="text" required />
+                    </div>
+                    <button type="submit" class="btn">追加</button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- 登録済みイベント一覧 -->
+              <div class="event-list card">
+                <div class="card-header collapsible-header" onclick="toggleCollapse('event-list-body')">
+                  <span>登録済みイベント</span>
+                  <button id="btn-show-past-events" class="btn">過去イベント表示</button>
+                  <span class="collapse-icon">▼</span>
+                </div>
+                <div class="card-body collapsible-body" id="event-list-body">
+                  <div id="event-list-content"></div>
+                  <!-- 過去イベント表示領域（初期非表示） -->
+                  <div id="past-event-list" style="display:none; margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                      <strong>過去のイベント</strong>
+                      <div>
+                        <button id="btn-delete-all-past" class="btn btn-danger btn-small">過去イベントを全削除</button>
+                        <button id="btn-hide-past-events" class="btn btn-small">閉じる</button>
+                      </div>
+                    </div>
+                    <div id="past-event-list-content"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- メッセージ管理セクション -->
+        <section id="message-mgmt" class="section">
+          <div class="section-header">
+            <h2>💬 店舗メッセージ管理</h2>
+          </div>
+          <div class="section-content">
+            <div class="management-grid grid-2">
+              <div class="add-message-form card">
+                <div class="card-header">新しいメッセージ投稿</div>
+                <div class="card-body">
+                  <form id="add-message-form">
+                    <div class="form-group">
+                      <label class="form-label">投稿者</label>
+                      <select class="form-select" name="author" required>
+                        <option value="">選択してください</option>
+                        <option value="manager">店長</option>
+                        <option value="fish">鮮魚部</option>
+                        <option value="produce">青果部</option>
+                        <option value="meat">精肉部</option>
+                        <option value="deli">惣菜部</option>
+                        <option value="bakery">ベーカリー</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">タイトル</label>
+                      <input
+                        type="text"
+                        class="form-input"
+                        name="title"
+                        placeholder="メッセージのタイトル"
+                        required
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">メッセージ内容</label>
+                      <textarea
+                        class="form-textarea"
+                        name="content"
+                        rows="5"
+                        placeholder="お客様へのメッセージを入力してください"
+                        required
+                      ></textarea>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">投稿日時</label>
+                      <input
+                        type="datetime-local"
+                        class="form-input"
+                        name="datetime"
+                        required
+                      />
+                    </div>
+                    <div class="form-group">
+                      <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="generateAIContent('message')"
+                      >
+                        🤖 AIでメッセージを改善
+                      </button>
+                    </div>
+                    <button type="submit" class="btn">メッセージを投稿</button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="message-list card">
+                <div
+                  class="card-header collapsible-header"
+                  onclick="toggleCollapse('message-list-body')"
+                >
+                  <span>投稿済みメッセージ</span>
+                  <span class="collapse-icon">▼</span>
+                </div>
+                <div
+                  class="card-body collapsible-body"
+                  id="message-list-body"
+                >
+                  <div id="message-list-content">
+                    <!-- メッセージリストはJavaScriptで生成 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 顧客要望管理セクション -->
+        <section id="request-mgmt" class="section">
+          <div class="section-header">
+            <h2>📝 お客様要望管理</h2>
+          </div>
+          <div class="section-content">
+            <div class="request-stats grid-3 mb-3">
+              <div class="stat-card card">
+                <div class="card-body text-center">
+                  <div class="stat-number">12</div>
+                  <div class="stat-label">未対応</div>
+                </div>
+              </div>
+              <div class="stat-card card">
+                <div class="card-body text-center">
+                  <div class="stat-number">8</div>
+                  <div class="stat-label">対応中</div>
+                </div>
+              </div>
+              <div class="stat-card card">
+                <div class="card-body text-center">
+                  <div class="stat-number">25</div>
+                  <div class="stat-label">完了</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="request-management">
+              <div class="filter-bar card">
+                <div class="card-body">
+                  <div class="filter-controls">
+                    <select class="form-select" id="status-filter">
+                      <option value="all">全て</option>
+                      <option value="pending">未対応</option>
+                      <option value="in-progress">対応中</option>
+                      <option value="completed">完了</option>
+                    </select>
+                    <select class="form-select" id="category-filter">
+                      <option value="all">全カテゴリー</option>
+                      <option value="product">商品について</option>
+                      <option value="service">サービスについて</option>
+                      <option value="store">店舗について</option>
+                      <option value="event">イベントの提案</option>
+                      <option value="other">その他</option>
+                    </select>
+                    <button class="btn" onclick="filterRequests()">
+                      フィルター適用
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="request-list" class="request-list">
+                <!-- 要望リストはJavaScriptで生成 -->
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 管理トークン設定モーダル -->
+    <div id="admin-token-modal" class="modal">
+      <div class="modal-content" style="max-width:480px">
+        <span class="close" onclick="closeAdminTokenModal()">&times;</span>
+        <h3>管理トークンの設定</h3>
+        <p>サーバに設定された <code>ADMIN_TOKEN</code> を入力し保存してください。POST系APIに自動付与されます。</p>
+        <div class="form-group">
+          <label class="form-label">ADMIN_TOKEN</label>
+          <input type="password" class="form-input" id="admin-token-input" placeholder="例: sk_live_xxx" />
+          <small class="form-hint">ブラウザの localStorage に保存されます（この端末のみ有効）。</small>
+        </div>
+        <div class="modal-buttons">
+          <button class="btn btn-secondary" onclick="closeAdminTokenModal()">キャンセル</button>
+          <button class="btn" onclick="saveAdminToken()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI生成モーダル -->
+    <div id="ai-modal" class="modal">
+      <div class="modal-content ai-modal-large">
+        <span class="close" onclick="closeAIModal()">&times;</span>
+        <div id="ai-content">
+          <h3>🤖 AIメッセージ改善</h3>
+          <div class="ai-comparison">
+            <div class="message-column">
+              <h4>元のメッセージ</h4>
+              <div id="original-message" class="message-display"></div>
+            </div>
+            <div class="message-column">
+              <h4>AI改善版</h4>
+              <textarea
+                id="improved-message"
+                class="ai-message-edit"
+                placeholder="AI改善版のメッセージが表示されます..."
+              ></textarea>
+              <div class="ai-controls">
+                <button id="regenerate-ai" class="btn btn-secondary">
+                  再生成
+                </button>
+                <button id="use-improved" class="btn btn-success">
+                  この内容で投稿
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeAIModal()">
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- お買い得商品AI改善モーダル -->
+    <div id="special-ai-modal" class="modal">
+      <div class="modal-content ai-modal-large">
+        <span class="close" onclick="closeSpecialAIModal()">&times;</span>
+        <div id="special-ai-content">
+          <h3>🤖 商品説明＆レシピAI生成</h3>
+          <div class="ai-comparison">
+            <div class="message-column">
+              <h4>商品情報</h4>
+              <div id="product-info" class="message-display"></div>
+            </div>
+            <div class="message-column">
+              <h4>AI生成コンテンツ</h4>
+              <div class="ai-generated-content">
+                <div class="content-section">
+                  <h5>商品説明</h5>
+                  <textarea
+                    id="generated-description"
+                    class="ai-message-edit"
+                    placeholder="AI生成された商品説明が表示されます..."
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div class="content-section">
+                  <h5>レシピ名</h5>
+                  <input
+                    id="generated-recipe-name"
+                    class="form-input"
+                    type="text"
+                    placeholder="AI生成されたレシピ名が表示されます..."
+                  />
+                </div>
+                <div class="content-section">
+                  <h5>レシピ詳細</h5>
+                  <textarea
+                    id="generated-recipe-details"
+                    class="ai-message-edit"
+                    placeholder="AI生成されたレシピの材料・作り方などが表示されます..."
+                    rows="6"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="ai-controls">
+                <button id="regenerate-special-ai" class="btn btn-secondary">
+                  再生成
+                </button>
+                <button id="use-special-content" class="btn btn-success">
+                  この内容を適用
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeSpecialAIModal()">
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // file:// で開いた場合も API を localhost:8787 に向ける
+      if (location.protocol === "file:") {
+        window.API_BASE_URL = window.API_BASE_URL || "http://localhost:8787";
+      }
+    </script>
+    <script type="module">
+      import {
+        apiImproveMessage,
+        apiSpecialDescription,
+        apiSpecialRecipe,
+        apiGetMessages,
+          apiLogEvent,
+        apiAddMessage,
+        apiDeleteMessage,
+        apiGetEvents,
+        apiAddEvent,
+        apiDeleteEvent,
+        apiGetSpecials,
+        apiGetActiveSpecials,
+        apiAddSpecial,
+        apiDeleteSpecial,
+        apiReorderSpecials,
+        apiGetComments,
+        apiGetRequests,
+        apiUpdateCommentStatus,
+        apiUpdateRequestStatus,
+        apiDeleteComment,
+        apiDeleteRequest,
+      } from "../js/api-client.js";
+      window.__api = Object.assign({}, window.__api || {}, {
+        apiImproveMessage,
+        apiSpecialDescription,
+        apiSpecialRecipe,
+        apiGetMessages,
+        apiAddMessage,
+        apiDeleteMessage,
+        apiGetEvents,
+        apiAddEvent,
+        apiDeleteEvent,
+        apiGetSpecials,
+        apiGetActiveSpecials,
+        apiAddSpecial,
+        apiDeleteSpecial,
+        apiReorderSpecials,
+        apiLogEvent,
+        // 要望/コメントAPI
+        apiGetComments,
+        apiGetRequests,
+        apiUpdateCommentStatus,
+        apiUpdateRequestStatus,
+        apiDeleteComment,
+        apiDeleteRequest,
+      });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
+    <script src="../js/staff.js"></script>
+  </body>
+</html>

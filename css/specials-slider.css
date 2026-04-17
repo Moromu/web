@@ -1,0 +1,364 @@
+/* お買い得商品商品スライダー用CSS */
+.specials-slider {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto; /* center slider in wide viewports */
+  overflow: hidden;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.specials-slider-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.specials-slider-item {
+  min-width: 720px;
+  max-width: 720px;
+  margin: 24px 16px;
+  flex-shrink: 0;
+  display: flex;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.specials-slider-item .special-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* 赤系テーマに馴染むように、ほんのり暖色の下地に */
+  background: #fff6f6;
+  border-right: 1px solid #e0e7ef;
+  position: relative;
+}
+.specials-slider-item .special-image img {
+  max-width: 240px;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+.specials-slider-item .discount-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 168px;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #222; /* 文字は黒 */
+  font-weight: 900;
+  font-size: 1.15em;
+  text-align: center;
+  line-height: 1.15;
+  /* バッジの四角背景を完全に無効化。customer.css側の赤背景を打ち消す */
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  isolation: isolate; /* 自前のスタッキングコンテキストを作って擬似要素の重なりを安定化 */
+  text-shadow: none;
+  position: absolute;
+}
+.specials-slider-item .discount-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><polygon points="150,10 165,28 185,18 195,38 220,28 225,50 250,45 245,68 270,70 260,90 280,100 260,110 270,130 245,125 250,148 225,143 220,165 195,155 185,175 165,165 150,183 135,165 115,175 105,155 80,165 75,143 50,148 55,125 30,130 40,110 20,100 40,90 30,70 55,68 50,45 75,50 80,28 105,38 115,18 135,28" fill="%23ffd600"/></svg>')
+    center/110% no-repeat;
+  z-index: 0; /* 背景の上、テキストの下に配置 */
+}
+/* テキストはスターの上にくるように */
+.specials-slider-item .discount-badge span {
+  position: relative;
+  z-index: 1;
+}
+/* 数字と単位の視認性を強化 */
+.specials-slider-item .discount-badge .num {
+  font-size: 2.4em;
+  line-height: 0.85;
+  display: inline-block;
+  margin-right: 2px;
+  color: #e53935;
+}
+.specials-slider-item .discount-badge .unit {
+  font-size: 0.95em;
+  letter-spacing: 0.02em;
+}
+@media (max-width: 900px) {
+  .specials-slider-item .discount-badge {
+    width: 136px;
+    height: 136px;
+    font-size: 1.05em;
+    top: 10px;
+    right: 13rem;
+  }
+  .specials-slider-item .discount-badge .num {
+    font-size: 2.2em;
+  }
+}
+@media (max-width: 480px) {
+  .specials-slider-item .discount-badge {
+    width: 120px;
+    height: 120px;
+    font-size: 1em;
+    top: 12px; /* 角の丸みに配慮して少し内側へ */
+    right: 16px; /* 右端でのはみ出し防止 */
+  }
+  .specials-slider-item .discount-badge .num {
+    font-size: 2em;
+  }
+}
+/* 余計なバッジ（ランキング/HOT）は廃止：スター型％OFFのみ表示 */
+.specials-slider-item .card-body {
+  flex: 1 1 auto;
+  padding: 15px 15px 15px 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.specials-slider-item h3 {
+  font-size: 1.7em;
+  color: #222;
+}
+.specials-slider-item .price-info {
+  /* 余白をやや詰めてカード全体の高さを抑制 */
+  font-size: 1.15em;
+  color: #222;
+  display: flex;
+  flex-direction: row; /* 明示的に横並びを指定 */
+  align-items: baseline;
+  justify-content: space-between; /* 等間隔配置 */
+  flex-wrap: nowrap; /* 改行しない */
+  gap: 8px;
+}
+.specials-slider-item .old-price {
+  text-decoration: line-through;
+  color: #888;
+}
+.specials-slider-item .new-price {
+  color: #e53935;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+.specials-slider-item .unit {
+  color: #222;
+  font-weight: 700; /* 税抜を太字に */
+  white-space: nowrap; /* （税抜）を改行させない */
+}
+
+/* 375px でも1行維持できるよう微調整 */
+@media (max-width: 400px) {
+  .specials-slider-item .price-info {
+    gap: 6px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+  .specials-slider-item .old-price,
+  .specials-slider-item .new-price,
+  .specials-slider-item .unit {
+    white-space: nowrap;
+  }
+  /* 文字間隔が広すぎると折り返すので小画面では詰める */
+  .specials-slider-item .new-price {
+    letter-spacing: 1px;
+  }
+}
+.specials-slider-item .promotion-text {
+  margin: 8px 0 0 0;
+  font-size: 1em;
+  color: #222;
+  /* 説明文をより多く表示できるように高さ拡張（従来 4.5em） */
+  max-height: 10em;
+  overflow: auto;
+}
+.specials-slider-item .promotion-text strong {
+  color: #e53935;
+}
+.specials-slider-item .btn-recipe {
+  display: inline-block;
+  margin-top: 16px;
+  /* お客様ページだけボタンをピンク系に */
+  background: #d36b8d;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 1em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(211, 107, 141, 0.18);
+  transition: background 0.2s, transform 0.1s;
+}
+.specials-slider-item .btn-recipe:hover {
+  background: #b25475;
+}
+.specials-slider-item .btn-recipe:active {
+  transform: translateY(1px);
+}
+@media (max-width: 900px) {
+  .specials-slider-item {
+    min-width: 98vw;
+    max-width: 98vw;
+    flex-direction: column;
+    padding: 0;
+  }
+  .specials-slider-item .special-image {
+    border-right: none;
+    border-bottom: 1px solid #e0e7ef;
+  }
+  .specials-slider-item h3 {
+    font-size: 1.2em;
+    display: -webkit-box;
+    line-clamp: 1;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .specials-slider-item .price-info {
+    font-size: 1em;
+    display: flex;
+    flex-direction: row; /* モバイルでも横並び維持 */
+    flex-wrap: nowrap; /* 改行しない */
+    justify-content: space-between;
+  }
+  /* ナビゲーションを画像領域の中央付近に寄せ、重なりを軽減 */
+  .specials-slider-nav {
+    top: 36%;
+    transform: translateY(-50%);
+  }
+  .specials-slider-nav button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.3em;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: saturate(120%) blur(2px);
+  }
+}
+
+/* 追加の保険: タブレット以下での横並び・改行抑止を強化 */
+@media (max-width: 768px) {
+  .specials-slider-item .price-info {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .specials-slider-item .price-info .new-price,
+  .specials-slider-item .price-info .old-price,
+  .specials-slider-item .price-info .unit {
+    order: 0; /* 並び順リセット（縦積み指示を打ち消す） */
+    white-space: nowrap; /* 各要素を1行に */
+    display: inline;
+    width: auto;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}
+.specials-slider-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.specials-slider-nav button {
+  pointer-events: auto;
+  background: #fff;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.specials-slider-nav button:hover {
+  background: #fff1f1;
+}
+@media (max-width: 600px) {
+  .specials-slider-item {
+    min-width: 90vw;
+    max-width: 90vw;
+    margin: 16px 4vw;
+  }
+  .specials-slider-nav {
+    top: 32%;
+  }
+  .specials-slider-nav button {
+    width: 32px;
+    height: 32px;
+    font-size: 1.2em;
+  }
+}
+
+/* ドットインジケーター */
+.specials-slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 14px 0;
+}
+.specials-slider-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d0d0d0;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s;
+}
+.specials-slider-dots .dot:hover {
+  transform: scale(1.15);
+}
+.specials-slider-dots .dot.active {
+  background: var(--primary-color, #e53935);
+}
+
+/* スライドのタッチ/ドラッグ感を出すためのヒント（非必須） */
+.specials-slider-track.dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+/* Desktop: enforce fixed card width regardless of image intrinsic size */
+@media (min-width: 901px) {
+  .specials-slider-item {
+    box-sizing: border-box;
+    flex: 0 0 720px !important; /* fixed width card */
+    width: 720px !important;
+    min-width: 720px !important;
+    max-width: 720px !important;
+    margin: 24px 16px;
+    align-items: stretch;
+  }
+  /* Make image area a fixed column and ensure images scale inside it */
+  .specials-slider-item .special-image {
+    flex: 0 0 260px;
+    width: 260px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  .specials-slider-item .special-image img {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .specials-slider-item .card-body {
+    flex: 1 1 auto;
+    padding: 20px;
+  }
+}

@@ -1,0 +1,1148 @@
+/* カレンダー2週間表示 拡大アニメーション */
+.calendar-2weeks-day {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  min-height: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.calendar-2weeks-grid {
+  overflow: visible !important;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* はみ出し防止 */
+  gap: 0; /* 隙間なし */
+}
+
+/* 正方形の日セル */
+.calendar-2weeks-day {
+  aspect-ratio: 1 / 1; /* 正方形 */
+  width: 100%;
+  min-width: 0; /* コンテンツに引っ張られて横に広がらないように */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid #e0e7ef; /* デフォルトの薄い枠 */
+  box-sizing: border-box;
+  padding: 6px 4px;
+  background: #f7f7f7; /* デフォルト背景（イベントなし） */
+}
+
+.calendar-2weeks-day .date-label {
+  font-weight: bold;
+  text-align: center;
+}
+
+.calendar-2weeks-day .icons {
+  margin-top: 4px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* プロモカード: イベントテキストの長さを省略記号で切り詰める */
+.composed-card .events-block .events-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.composed-card .events-block .ev-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.composed-card .events-block .ev-item .ev-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.composed-card .events-block .ev-item .ev-text {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* イベント有り・無しの見た目差分（JSでクラス付与） */
+.calendar-2weeks-day.has-events {
+  background: #f7f7f7; /* これからの日程（イベントの有無にかかわらず）は淡いグレー */
+  /* イベントありでも過度に目立たせない。今日のみ別途強調する */
+  border: 1px solid #e0e7ef;
+  box-shadow: none;
+}
+.calendar-2weeks-day.no-events {
+  background: #f7f7f7;
+  border: 1px solid #e0e7ef;
+  box-shadow: none;
+}
+
+/* 今日ハイライト */
+.calendar-2weeks-day.today {
+  border: 3px solid #f7b500; /* 黄色い太い枠 */
+  border-radius: 8px;
+  box-shadow: 0 4px 18px #f7b50033; /* 軽い光彩で目立たせる */
+  background: #fff; /* 背景は白にして境界線を強調 */
+}
+
+/* 今日でイベントがある場合は背景を黄色で強調する（非当日は灰色） */
+.calendar-2weeks-day.today.has-events {
+  background: #fffbe6;
+}
+
+/* 過去日（昨日を含むそれより以前）: 薄い灰色背景と濃い灰色文字 */
+.calendar-2weeks-day.past {
+  background: #cfcfcf; /* 過ぎた日程は濃いめの灰色 */
+  color: #444444;
+  border: 1px solid #bfbfbf;
+}
+
+/* 過去日の中身も淡くする（アイコン・日付ラベル・イベント） */
+.calendar-2weeks-day.past .date-label,
+.calendar-2weeks-day.past .day-number,
+.calendar-2weeks-day.past .icons,
+.calendar-2weeks-day.past .day-events {
+  color: #666666;
+  opacity: 0.95;
+}
+.calendar-2weeks-day.past .icons img {
+  filter: grayscale(100%);
+  opacity: 0.8; /* アイコンをグレースケールにして薄めに表示 */
+}
+.calendar-2weeks-day.past .day-event .event-dot {
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+/* 今日セルの下に表示されるイベントラベル（例: test, クリスマス）を強調 */
+.calendar-2weeks-day.today .day-events .day-event {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #000;
+}
+
+/* スクロール時のリビール演出 */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* モバイル向け最適化：はみ出し防止と縮小 */
+@media (max-width: 480px) {
+  .calendar-container {
+    overflow-x: hidden; /* 小数点の丸め誤差による横スクロールを抑止 */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .calendar-2weeks-grid {
+    width: 100%;
+  }
+  .calendar-2weeks-day {
+    padding: 4px 2px; /* 内側の余白を圧縮 */
+  }
+  .calendar-2weeks-day .date-label {
+    font-size: 0.85rem; /* 文字サイズをやや小さく */
+    line-height: 1.15;
+  }
+  /* カレンダー内アイコンをスマホで大きめにして視認性を向上 */
+  .calendar-2weeks-day .icons img {
+    width: 28px !important; /* できるだけ大きく表示 */
+    height: 28px !important;
+  }
+  /* 今日のアイコン横の文字を強調（太字） */
+  .calendar-2weeks-day.today .icons span,
+  .calendar-2weeks-day.today .icons .icon-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #000;
+  }
+}
+
+@media (max-width: 360px) {
+  .calendar-2weeks-day .date-label {
+    font-size: 0.8rem;
+  }
+  .calendar-2weeks-day .icons img {
+    width: 24px !important; /* 小画面でも極端に小さくならないように */
+    height: 24px !important;
+  }
+}
+.calendar-2weeks-day.active {
+  transform: scale(1.6) translateY(-40px);
+  z-index: 100;
+  box-shadow: 0 4px 24px #f7b50055;
+  position: relative;
+}
+
+/* 詳細ビュー（グリッド中央に表示） */
+.calendar-detail-row {
+  grid-column: 1 / -1; /* 7列全てを跨ぐ */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0 8px;
+}
+.calendar-detail-card {
+  background: #fffbe6;
+  border: 2px solid #f7b500;
+  box-shadow: 0 4px 24px #f7b50055;
+  border-radius: 18px;
+  padding: 20px 24px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+.calendar-back-btn {
+  margin-top: 24px;
+  padding: 8px 24px;
+  font-size: 1em;
+  border-radius: 8px;
+  background: #f7b500;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .calendar-detail-row {
+    padding: 8px 0 4px;
+  }
+  .calendar-detail-card {
+    max-width: 92vw; /* 画面幅に収まる */
+    padding: 16px 16px;
+  }
+}
+/* 顧客向けページ専用スタイル */
+
+/* カレンダー */
+.calendar-container {
+  background: white;
+  border-radius: 8px;
+  overflow: visible !important;
+}
+
+/* カレンダーのヘッダー */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--secondary-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.btn-nav {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-nav:hover {
+  background: var(--primary-dark);
+}
+
+/* カレンダーグリッド */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+}
+
+.calendar-day-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* カレンダーセル */
+.calendar-day {
+  background: #fff;
+  min-height: 140px;
+  padding: 0.5rem;
+  position: relative;
+  font-size: 0.8rem;
+}
+
+.calendar-day:hover {
+  background-color: #f8f9fa;
+}
+
+.calendar-day.other-month {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+/* === 2カラム（左：詳細 右：カレンダー） === */
+.calendar-two-col {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.calendar-side .calendar-detail-card2 {
+  background: #f4f6f9;
+  border: 1px solid #e0e7ef;
+  padding: 16px;
+}
+.calendar-detail-title {
+  margin: 0 0 8px 0;
+}
+.calendar-main {
+  min-width: 0;
+}
+
+/* 選択中セルのハイライト */
+.calendar-2weeks-day.selected {
+  outline: 3px solid #87cefa;
+  outline-offset: -2px;
+}
+
+@media (max-width: 900px) {
+  .calendar-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar-day.today {
+  border: 3px solid #ffd166; /* 黄色い太い枠（月表示などのセル） */
+  border-radius: 6px;
+  background: #fff; /* 枠を際立たせるため中は白に */
+  font-weight: 700;
+}
+
+/* 過去日（昨日を含むそれより以前）: 薄い灰色背景と濃い灰色文字 */
+.calendar-day.past {
+  background: #cfcfcf;
+  color: #444444;
+  border: 1px solid #bfbfbf;
+}
+
+.calendar-day.past .icons img {
+  filter: grayscale(100%);
+  opacity: 0.8;
+}
+
+/* 日セル内イベントリスト */
+.day-events {
+  margin-top: 4px;
+}
+
+/* バー方式スタイル削除 */
+/* 日セル内 期間イベント（同デザイン統一） */
+.period-day-event {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-left: 3px solid var(--primary-color);
+}
+
+.event-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.event-dot.special-sale {
+  background-color: #ff6b6b;
+}
+
+.event-dot.event {
+  background-color: #4ecdc4;
+}
+
+.event-dot.announcement {
+  background-color: #45b7d1;
+}
+
+.events-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-color.special-sale {
+  background-color: #ff6b6b;
+}
+
+.legend-color.event {
+  background-color: #4ecdc4;
+}
+
+.legend-color.announcement {
+  background-color: #45b7d1;
+}
+
+/* お買い得商品 */
+.specials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.special-item {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.special-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.special-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.special-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.discount-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Tablet / iPad portrait: avoid badge sitting too far to the right */
+@media (min-width: 600px) and (max-width: 900px) {
+  .discount-badge {
+    right: 24px; /* move badge left a bit on medium widths */
+    top: 12px; /* slight vertical adjustment for visual balance */
+    font-size: 0.88rem;
+    padding: 0.2rem 0.65rem;
+  }
+}
+
+/* Narrow tablet / large phones: slightly reduce offset */
+@media (max-width: 599px) {
+  .discount-badge {
+    right: 12px;
+  }
+}
+
+.price-info {
+  display: flex;
+  align-items: center;
+}
+/* 特価（新価格）と（税抜）の間隔をさらに詰める */
+.price-info .old-price,
+.price-info .new-price {
+  margin-right: 2px;
+}
+
+/* 新価格の位置を少し右に寄せる（標準画面） */
+.price-info .new-price {
+  margin-left: 20px;
+}
+
+/* （税抜）の左余白を詰め、太字にする */
+.price-info .unit {
+  font-weight: 700;
+  white-space: nowrap; /* （税抜）を改行させない */
+}
+
+/* 顧客ページ: 商品カード内のタイトルと価格表示を
+   画面横幅全体に対して中央配置にする（カード内の左マージンを廃止） */
+.specials-slider-item .card-body h3,
+.specials-slider-item .card-body .price-info {
+  display: block;
+  width: 100vw; /* ビューポート全幅に広げて中央揃え */
+  max-width: 100vw;
+  box-sizing: border-box;
+  margin-left: calc(50% - 50vw); /* 親コンテナからビューポート左端へ合わせる */
+  margin-right: calc(50% - 50vw);
+  text-align: center; /* 中央揃え */
+}
+
+/* 小さい画面ではカードレイアウトに戻す（中央表示を解除） */
+@media (max-width: 468px) {
+  .specials-slider-item .card-body h3,
+  .specials-slider-item .card-body .price-info {
+    width: auto;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: center; /* 小画面でも中央寄せ */
+  }
+}
+
+/* 大きな画面ではタイトル（h3）はカード内の元の位置に戻す（中央表示はprice-infoのみに適用） */
+@media (min-width: 901px) {
+  .specials-slider-item .card-body h3 {
+    width: auto;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: center; /* デスクトップでも中央寄せ */
+    display: block;
+  }
+}
+
+.old-price {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.new-price {
+  /* スタッフ側の `.p-new` と同じフォント設定に揃える */
+  color: #ff0000;
+  font-family: "Arial Black", "Hiragino Sans", "BIZ UDPGothic", "Meiryo UI",
+    sans-serif;
+  font-weight: 900;
+  font-size: 3.5rem;
+  line-height: 1.2;
+  letter-spacing: 6px;
+  display: inline-block;
+  border-radius: 3px;
+  right: -5px;
+}
+
+.unit {
+  color: #666;
+  font-size: 0.8rem;
+  white-space: nowrap; /* （税抜）を改行させない（保険） */
+}
+
+/* プロモカード内のお買い得商品で使う単位表示 */
+.sp-unit {
+  color: #666;
+  font-size: 0.85rem;
+  margin-left: 6px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+/* 税抜ラベル（unit と併用して表示される） */
+.tax {
+  color: #666;
+  font-size: 0.8rem;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* Rate limit banner (顧客ページの上部に表示) */
+#rate-limit-banner {
+  background: #fff4e6;
+  color: #5a2b00;
+  border-bottom: 1px solid #ffd9b3;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 16px;
+  font-weight: 700;
+}
+#rate-limit-banner button {
+  margin-left: 12px;
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* rate-limited モード: バナー以外を非表示にする */
+html.rate-limited > body > * {
+  display: none !important;
+}
+/* ただしバナー自体は <html> に追加されるため、表示を優先する */
+#rate-limit-banner {
+  display: flex !important;
+}
+
+.promotion-text {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+  border-left: 4px solid var(--primary-color);
+}
+
+.promotion-text p {
+  margin-bottom: 0.5rem;
+}
+
+/* Composed slide styles for Splide (events + specials) */
+.composed-card {
+  display: flex;
+  align-items: stretch;
+  padding: 10px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #ffffff 0%, #fff9f2 60%, #fff4ea 100%);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06),
+    inset 0 -4px 12px rgba(250, 240, 230, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  max-height: 160px;
+  overflow: hidden;
+}
+.composed-card .events-block,
+.composed-card .specials-block {
+  flex: 1 1 50%;
+  border-radius: 8px;
+}
+
+.composed-card .block-title {
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.2px;
+  display: inline-flex; /* 横並びで中央寄せにする */
+  align-items: center; /* ::before を文字の中央に揃える */
+}
+.composed-card .events-list,
+.composed-card .specials-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* Default (mobile-first): show events horizontally */
+.composed-card .events-list {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+}
+.composed-card .ev-item {
+  padding: 4px 0;
+  font-size: 0.95rem;
+  color: #000; /* テキストを黒に */
+  font-weight: 600; /* 少し太めにして視認性を向上 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.composed-card .ev-item .ev-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.composed-card .ev-text {
+  display: inline-block;
+}
+.composed-card .ev-item:last-child {
+  border-bottom: none;
+}
+.composed-card .sp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed rgba(183, 28, 28, 0.05);
+}
+.composed-card .sp-item {
+  gap: 8px;
+}
+.composed-card .sp-thumb {
+  width: 32px; /* モバイルではやや小さめに */
+  height: 32px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Desktop: show events horizontally within the events-block */
+@media (min-width: 901px) {
+  /* On desktop, stack events vertically (each on its own line) */
+  .composed-card .events-list {
+    display: block;
+  }
+  .composed-card .events-list .ev-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(11, 107, 88, 0.06);
+  }
+  /* Desktopでは特売サムネイルを大きめに戻す */
+  .composed-card .sp-thumb {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Ensure images in composed-card don't overflow */
+.composed-card img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+.composed-card .sp-item:last-child {
+  border-bottom: none;
+}
+.composed-card .sp-name {
+  font-weight: 700;
+  color: #222;
+  font-size: 0.92rem;
+  display: block; /* enable text-overflow behavior inside flex */
+  min-width: 0; /* allow flex child to shrink for truncation */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* prevent wrapping to second line */
+}
+.composed-card .sp-price {
+  color: #b71c1c;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+/* 元値表示（取り消し線）を 600px〜900px の間で sp-price の左に表示する */
+.composed-card .sp-original {
+  display: none;
+}
+
+/* 表示ルール: 600-900px および 1000px 以上で元値を価格の直前に表示 */
+@media (min-width: 600px) and (max-width: 900px), (min-width: 1000px) {
+  .composed-card .sp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .composed-card .sp-name {
+    flex: 1 1 auto;
+    min-width: 0; /* truncation を有効にする */
+  }
+  .composed-card .sp-original {
+    display: inline-block;
+    color: #444444; /* 濃い灰色 */
+    text-decoration: line-through;
+    font-weight: 700;
+    font-size: 0.9rem;
+    /* 価格のすぐ左に来るように右寄せ */
+    margin-left: auto;
+    margin-right: 6px;
+  }
+  .composed-card .sp-original::after {
+    content: " →";
+    color: #444444;
+    margin-left: 4px;
+  }
+  /* 画面幅に応じて余白が広がるようにする: 最小20px、理想はビューポート比、最大80px */
+  .composed-card .sp-price {
+    font-size: 1rem;
+    margin-right: clamp(20px, 1.5vw, 80px);
+  }
+}
+
+/* 820px 前後の縦向きタブレット（例: 820x1180）では余白を多めに取る */
+@media (min-width: 760px) and (max-width: 820px) {
+  .composed-card .sp-price {
+    margin-right: clamp(36px, 3vw, 120px);
+  }
+}
+.composed-card .empty-note {
+  color: #666;
+  padding: 0 0 6px 0;
+}
+
+/* Decorative ribbon for titles */
+.composed-card .block-title::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: #c30d23; /* 黒に変更 */
+  opacity: 1;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* 特売サムネイルは画面サイズ問わず表示しない（商品画像を追加しない方針） */
+.composed-card .sp-thumb {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Responsive: stack vertically on narrow screens */
+@media (max-width: 900px) {
+  .composed-card {
+    flex-direction: column;
+  }
+  .composed-card .events-block,
+  .composed-card .specials-block {
+    width: 100%;
+  }
+}
+
+/* Desktop: slightly wider horizontal padding for composed card */
+@media (min-width: 901px) {
+  .composed-card {
+    padding: 10px 20px;
+  }
+}
+
+/* 820px 前後の縦向きタブレットで左右パディングを広げる（例: 820x1180） */
+@media (min-width: 760px) and (max-width: 820px) {
+  .composed-card {
+    padding-left: 60px;
+    padding-right: 60px;
+  }
+}
+
+.promotion-text p:last-child {
+  margin-bottom: 0;
+}
+
+.btn-recipe {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* メッセージ */
+.messages-container {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.message-item {
+  margin-bottom: 1.5rem;
+}
+
+.message-author {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.author-icon {
+  font-size: 1.2rem;
+}
+
+.author-name {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.message-date {
+  margin-left: auto;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.message-item h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+/* 要望フォーム */
+.request-form {
+  background-color: #f8f9fa;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+/* モーダル */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Header / store-name styling */
+.logo {
+  display: flex;
+  align-items: center;
+}
+.logo-text {
+  margin: 0;
+  font-size: 0.8em;
+  color: #fff; /* store name should always be white */
+  font-weight: 600;
+  line-height: 1;
+}
+.logo-text .store-line1,
+.logo-text .store-line2 {
+  display: block; /* デスクトップでも2行表示にする */
+}
+
+/* Mobile: increase section header sizes for readability */
+@media (max-width: 600px) {
+  .section-header h2 {
+    font-size: 1.9rem; /* increased per request */
+    line-height: 1.02;
+    margin: 0.25rem 0;
+    font-weight: 700;
+  }
+}
+
+.modal-content {
+  background-color: white;
+  margin: 8rem auto;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  position: relative;
+  max-height: calc(
+    80vh - var(--modal-header-offset, 96px)
+  ); /* ヘッダー分を差し引いて縦に収める */
+  overflow-y: auto;
+}
+
+.close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--primary-color);
+}
+
+.recipe-title {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.recipe-ingredients,
+.recipe-steps {
+  margin-bottom: 1.5rem;
+}
+
+.recipe-ingredients h4,
+.recipe-steps h4 {
+  color: var(--primary-dark);
+  margin-bottom: 0.5rem;
+}
+
+.recipe-ingredients ul,
+.recipe-steps ol {
+  padding-left: 1.5rem;
+}
+
+.recipe-ingredients li,
+.recipe-steps li {
+  margin-bottom: 0.25rem;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .calendar-grid {
+    gap: 1px;
+  }
+
+  .specials-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+
+  .day-event {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.2rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .day-number {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .calendar-nav button {
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .events-legend {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .price-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  /* 小画面では余白をリセットして詰める */
+  .price-info .new-price {
+    margin-left: 0;
+  }
+
+  .product-card {
+    padding: 1rem;
+  }
+
+  .btn-primary {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .form-input,
+  .form-textarea {
+    padding: 0.8rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+}
+
+/* 小さなスマートフォン対応 */
+@media (max-width: 480px) {
+  .calendar-day {
+    min-height: 70px;
+    font-size: 0.7rem;
+    padding: 0.2rem;
+  }
+
+  .day-number {
+    font-size: 0.75rem;
+  }
+
+  .day-event {
+    font-size: 0.55rem;
+    padding: 0.1rem;
+  }
+
+  .calendar-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .product-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .section-header h2 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-header {
+    padding: 0.9rem 1rem;
+  }
+  .section-header h2 {
+    font-size: 1.3rem; /* larger on small phones */
+    line-height: 1.02;
+    margin: 0;
+    font-weight: 800;
+  }
+}
+
+/* Very narrow phones: ensure store name stays within two lines and price/unit layout stacks cleanly */
+@media (max-width: 375px) {
+  /* Clamp store name to max 2 lines to avoid accidental 3-line wrapping */
+  .logo-text {
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .logo-text .store-line1,
+  .logo-text .store-line2 {
+    display: block;
+  }
+
+  /* Ensure price info stacks and unit moves to its own line if needed */
+  .price-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .price-info .new-price,
+  .price-info .old-price {
+    order: 1;
+    white-space: normal; /* allow price to wrap if necessary */
+  }
+  .price-info .unit {
+    order: 2;
+    display: block;
+    width: 100%;
+    white-space: nowrap; /* keep unit on a single line */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* プロモカード周りの余白調整（より詰める） */
+#ad-slider-container {
+  margin-bottom: 2px;
+}
+#promo-card {
+  margin-bottom: 0;
+}
+@media (max-width: 600px) {
+  #ad-slider-container {
+    margin-bottom: 6px;
+  }
+}
+
+/* 顧客ページ: 常にカード内の商品名を中央寄せにする（最終上書きルール） */
+.specials-slider-item .card-body h3 {
+  text-align: center;
+}
